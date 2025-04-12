@@ -5,7 +5,7 @@ from re import search, escape
 class ChapterStat:
     chapter_number: int
     char_length: int
-    occurrence_pos: list[int]
+    occurrence_pos: list[float]
 
 chapter_stats = []
 
@@ -28,43 +28,40 @@ def find_sub(needle, haystack):
         return -1
     return x.start()
 
-with open("input.txt") as text:
-    chapter_count = 1
-    bottom_bound = "Chapter " + str(chapter_count)
-    upper_bound = "Chapter " + str(chapter_count + 1)
+def get_chapters_stats(search_token):
+    with open("input.txt") as text:
+        chapter_count = 1
+        bottom_bound = "Chapter " + str(chapter_count)
+        upper_bound = "Chapter " + str(chapter_count + 1)
 
-    found_start = False
-    chapter_len = 0
-    curr_chapter_offset = 0
-    chapter_occurrence_pos = []
+        found_start = False
+        chapter_len = 0
+        curr_chapter_offset = 0
+        chapter_occurrence_pos = []
 
-    for line in text:
-        if line.find(bottom_bound) >= 0:
-            found_start = True
-        if found_start:
-            if line.find(upper_bound) >= 0:
-                chapter_stats.extend(ChapterStat(chapter_number=chapter_count,
-                                                 char_length=chapter_len,
-                                                 occurrence_pos=chapter_occurrence_pos))
+        for line in text:
+            if line.find(bottom_bound) >= 0:
+                found_start = True
+            if found_start:
+                if line.find(upper_bound) >= 0:
+                    chapter_stats.append(ChapterStat(chapter_number=chapter_count,
+                                                     char_length=chapter_len,
+                                                     occurrence_pos=chapter_occurrence_pos))
 
-                chapter_count += 1
-                bottom_bound = "Chapter " + str(chapter_count)
-                upper_bound = "Chapter " + str(chapter_count + 1)
-                found_start = False # likely redundant
-                chapter_len = 0
-                curr_chapter_offset = 0
-                chapter_occurrence_pos = []
+                    chapter_count += 1
+                    bottom_bound = "Chapter " + str(chapter_count)
+                    upper_bound = "Chapter " + str(chapter_count + 1)
+                    chapter_len = 0
+                    curr_chapter_offset = 0
+                    chapter_occurrence_pos = []
 
-            chapter_len += len(line)
-            print("appending " + str(search_line(search_token,
-                                                      line,
-                                                      curr_chapter_offset)))
-            chapter_occurrence_pos.extend(search_line(search_token,
-                                                      line,
-                                                      curr_chapter_offset))
-            curr_chapter_offset += len(line)
-    chapter_stats.append(ChapterStat(chapter_number=chapter_count,
-                                     char_length=chapter_len,
-                                     occurrence_pos=chapter_occurrence_pos))
-    print(chapter_stats)
+                chapter_len += len(line)
+                chapter_occurrence_pos.extend(search_line(search_token,
+                                                          line,
+                                                          curr_chapter_offset))
+                curr_chapter_offset += len(line)
+        chapter_stats.append(ChapterStat(chapter_number=chapter_count,
+                                         char_length=chapter_len,
+                                         occurrence_pos=chapter_occurrence_pos))
+        return chapter_stats
 
