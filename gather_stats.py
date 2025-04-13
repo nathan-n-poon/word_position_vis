@@ -5,7 +5,8 @@ from re import search, escape
 class ChapterStat:
     chapter_number: int
     char_length: int
-    occurrence_pos: list[float]
+    occurrence_pos: list[int]
+    occ_pos_norm: list[float]
 
 chapter_stats = []
 
@@ -46,7 +47,8 @@ def get_chapters_stats(search_token):
                 if line.find(upper_bound) >= 0:
                     chapter_stats.append(ChapterStat(chapter_number=chapter_count,
                                                      char_length=chapter_len,
-                                                     occurrence_pos=chapter_occurrence_pos))
+                                                     occurrence_pos=chapter_occurrence_pos,
+                                                     occ_pos_norm=[]))
 
                     chapter_count += 1
                     bottom_bound = "Chapter " + str(chapter_count)
@@ -62,6 +64,7 @@ def get_chapters_stats(search_token):
                 curr_chapter_offset += len(line)
         chapter_stats.append(ChapterStat(chapter_number=chapter_count,
                                          char_length=chapter_len,
-                                         occurrence_pos=chapter_occurrence_pos))
+                                         occurrence_pos=chapter_occurrence_pos,
+                                         occ_pos_norm=[]))
         return chapter_stats
 

@@ -8,17 +8,17 @@ def vis_chapter(chapter_stats, y_offset):
     y = y_offset
     height = 1
 
-    line_len = xmax * chapter_stats.char_length/max_len
-    plt.hlines(y, xmin, line_len)
-    plt.vlines(xmin, y - height / 2., y + height / 2.)
-    plt.vlines(line_len, y - height / 2., y + height / 2.)
+    line_len = (xmax - xmin) * chapter_stats.char_length/max_len
+    plt.hlines(y, xmin, xmin + line_len)
+    y_span = height / 3.
+    plt.vlines(xmin, y - y_span, y + y_span)
+    plt.vlines(xmin + line_len, y - y_span, y + y_span)
 
-    for pos in chapter_stats.occurrence_pos:
-        # pos is already normalized
-        # i should create a separate field for normalized data methinks...
-        dbg = line_len * pos
+    for pos in chapter_stats.occ_pos_norm:
+        dbg = line_len * pos + xmin
+        print(pos, dbg)
         dbg2 = pos
-        plt.plot(dbg, y, 'ro', ms=15, mfc='r')
+        plt.plot(dbg, y, 'ro', markersize=10, markerfacecolor='r')
 
 chapters_stats = gather_stats.get_chapters_stats("and")
 max_len = -1
@@ -30,10 +30,10 @@ for chapter_stats in chapters_stats:
 # separate for loop, maybe less cache hit but idgad
 for chapter_stats in chapters_stats:
     for i in range(len(chapter_stats.occurrence_pos)):
-        chapter_stats.occurrence_pos[i] /= chapter_stats.char_length
+        chapter_stats.occ_pos_norm.append(chapter_stats.occurrence_pos[i] / chapter_stats.char_length)
 
 side_margin = 1
-top_margin = 5
+top_margin = 1
 
 vertical_offset = 0
 
