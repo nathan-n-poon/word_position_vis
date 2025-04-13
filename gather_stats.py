@@ -7,6 +7,7 @@ class ChapterStat:
     char_length: int
     occurrence_pos: list[int]
     occ_pos_norm: list[float]
+    occ_pos_plot_loc: list[float]
 
 chapter_stats = []
 
@@ -48,7 +49,8 @@ def get_chapters_stats(search_token):
                     chapter_stats.append(ChapterStat(chapter_number=chapter_count,
                                                      char_length=chapter_len,
                                                      occurrence_pos=chapter_occurrence_pos,
-                                                     occ_pos_norm=[]))
+                                                     occ_pos_norm=[],
+                                                     occ_pos_plot_loc=[]))
 
                     chapter_count += 1
                     bottom_bound = "Chapter " + str(chapter_count)
@@ -65,6 +67,7 @@ def get_chapters_stats(search_token):
         chapter_stats.append(ChapterStat(chapter_number=chapter_count,
                                          char_length=chapter_len,
                                          occurrence_pos=chapter_occurrence_pos,
-                                         occ_pos_norm=[]))
+                                         occ_pos_norm=[],
+                                         occ_pos_plot_loc=[]))
         return chapter_stats
 
