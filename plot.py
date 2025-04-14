@@ -78,11 +78,14 @@ def xLimChanged(axes):
         aggregate_all(0.3 * bounds/init_x_lim)
         prev_x_lim = bounds
 def yLimChanged(axes):
-    global prev_y_lim
+    global init_y_lim
     (bot, top) = axes.get_ylim()
     bounds = round(top) - round(bot)
-    if bounds != prev_y_lim:
-        prev_y_lim = bounds
+    if bounds != init_y_lim:
+        axes.set_ylim(bot, bot+init_y_lim)
+        (bot, top) = axes.get_ylim()
+        bounds = round(top) - round(bot)
+        print("bounds are "+ str(bounds))
 
 def aggregate_all(coalesce_width):
     count = 1
@@ -124,12 +127,10 @@ aggregate_all(0.3)
 init_x_lim = round(b) - round(a)
 prev_x_lim = init_x_lim
 (a, b) = ax.get_ylim()
-prev_y_lim = round(b) - round(a)
+init_y_lim = round(b) - round(a)
 cb_registry = ax.callbacks
 cidx = cb_registry.connect('xlim_changed', xLimChanged)
 cidy = cb_registry.connect('ylim_changed', yLimChanged)
 
 plt.axis('off')
 plt.show()
-
-
