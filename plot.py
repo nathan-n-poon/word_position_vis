@@ -1,50 +1,35 @@
+import matplotlib
 import matplotlib.pyplot as plt
+from fontTools.unicodedata import block
 from matplotlib.patches import Rectangle
+from matplotlib.widgets import Button, TextBox
 
 import gather_stats
-
-# constants
-top_margin = 1
-chapter_disp_height = 1
-bounds_height = chapter_disp_height / 3.
-marker_size = 10
-
-z_order_inc = 5
-z_order_line_graph = 0
-z_order_marker = z_order_line_graph + z_order_inc
-z_order_aggregate = z_order_marker + z_order_inc
-z_order_aggregate_label = z_order_aggregate + z_order_inc
-
-marker_default_colour = (0.75, 0.75, 0.5)
-aggregate_proportional_redshift = 0.05
-
-# 0.1 works on my display :P
-aggregate_label_centre_shift = 0.1
-aggregate_base_distance_thresh = 0.3
-
-window_x_start = 0
-window_x_end = 10
-line_x_pad = 1
-line_x_start = window_x_start + line_x_pad
-line_x_end = window_x_end - line_x_pad
-window_y_start = 0
-window_y_end = 10
+from consts import *
 
 # global context
 class SingletonContext(object):
-    cur_aggregates: []
     max_len: int
 
     # plot stuff
     ax: plt.Axes
+    fig: plt.Figure
 
     init_x_lim: float
     prex_x_bounds: float
     init_y_bounds: float
     chapters_stats: [gather_stats.ChapterStat]
+    search_term_input: TextBox
+
+    # clear these on refresh
+    search_results: []
+    cur_aggregates: []
+
+    #TODO: maybe init vals for all fields here
     def __new__(self):
         if not hasattr(self, 'instance'):
           self.instance = super(SingletonContext, self).__new__(self)
+        self.search_results = []
         self.cur_aggregates = []
         return self.instance
 
@@ -52,6 +37,11 @@ class SingletonContext(object):
         for aggregate in self.cur_aggregates:
             aggregate.remove()
         self.cur_aggregates = []
+
+    def clear_search_results(self):
+        for result in self.search_results:
+            result.remove()
+        self.search_results = []
 
 def vis_chapter(chapter_stats, y_offset):
     global context
@@ -66,10 +56,12 @@ def vis_chapter(chapter_stats, y_offset):
 
     for pos in chapter_stats.occ_pos_norm:
         plot_loc = line_len * pos + line_x_start
-        plt.plot(plot_loc, y,
+        chapter_stats.occ_pos_plot_loc.append(plot_loc)
+
+        temp = plt.plot(plot_loc, y,
                  marker='|', markersize=marker_size,
                  markeredgecolor=marker_default_colour)
-        chapter_stats.occ_pos_plot_loc.append(plot_loc)
+        context.search_results.extend(temp)
 
 def add_aggregate_label(x, y, width, aggregate_size):
     global context
@@ -141,29 +133,9 @@ def create_and_populate_graph():
     global context
 
     context.fig = plt.figure()
-    context.ax = context.fig.add_subplot(111)
-
-    context.chapters_stats = gather_stats.get_chapters_stats("and")
-    context.max_len = -1
-
-    for chapter_stats in context.chapters_stats:
-        if chapter_stats.char_length > context.max_len:
-            context.max_len = chapter_stats.char_length
-
-    # separate for loop, maybe less cache hit but idgad
-    for chapter_stats in context.chapters_stats:
-        for i in range(len(chapter_stats.occurrence_pos)):
-            chapter_stats.occ_pos_norm.append(chapter_stats.occurrence_pos[i] / chapter_stats.char_length)
-
+    context.ax = context.fig.add_subplot(1, 1, 1)
     context.ax.set_xlim(window_x_start, window_x_end)
     context.ax.set_ylim(window_y_start, window_y_end)
-
-    count = 0
-    for chapter_stats in context.chapters_stats:
-        vis_chapter(chapter_stats, top_margin * count)
-        count -= 1
-
-    aggregate_all(aggregate_base_distance_thresh)
 
     (a, b) = context.ax.get_xlim()
     context.init_x_lim = round(b) - round(a)
@@ -176,8 +148,43 @@ def create_and_populate_graph():
     cidx = cb_registry.connect('xlim_changed', callback_x_bounds_changed)
     cidy = cb_registry.connect('ylim_changed', callback_y_bounds_changed)
 
+    driver("and")
+
     plt.axis('off')
+
+    context.search_term_input = TextBox(plt.axes([0.2, 0.85, 0.1, 0.05]), "Search term")
+    context.search_term_input.on_submit(refresh)
+    plt.sca(context.ax)
     plt.show()
 
+def driver(search_term):
+    global context
+    context.chapters_stats = gather_stats.get_chapters_stats(search_term)
+    context.max_len = -1
+
+    for chapter_stats in context.chapters_stats:
+        if chapter_stats.char_length > context.max_len:
+            context.max_len = chapter_stats.char_length
+
+    # separate for loop, maybe less cache hit but idgad
+    for chapter_stats in context.chapters_stats:
+        for i in range(len(chapter_stats.occurrence_pos)):
+            chapter_stats.occ_pos_norm.append(chapter_stats.occurrence_pos[i] / chapter_stats.char_length)
+
+    count = 0
+    for chapter_stats in context.chapters_stats:
+        vis_chapter(chapter_stats, top_margin * count)
+        count -= 1
+
+    aggregate_all(aggregate_base_distance_thresh)
+
+def refresh(event):
+    global context
+
+    print("refresh")
+    context.clear_search_results()
+    context.clear_aggregates()
+
 context = SingletonContext()
+context.search_results = []
 create_and_populate_graph()
