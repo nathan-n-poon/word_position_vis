@@ -31,6 +31,8 @@ def find_sub(needle, haystack):
     return x.start()
 
 def get_chapters_stats(search_token):
+    global chapter_stats
+    chapter_stats = []
     with open("input.txt") as text:
         chapter_count = 1
         bottom_bound = "Chapter " + str(chapter_count)
