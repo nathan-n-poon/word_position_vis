@@ -1,19 +1,25 @@
+from typing import List
+
 import matplotlib
 import matplotlib.pyplot as plt
 from fontTools.unicodedata import block
+from matplotlib.collections import LineCollection
+from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
+from matplotlib.text import Text
 from matplotlib.widgets import Button, TextBox
 
 import gather_stats
 from consts import *
 
-
 class SingletonSearchData(object):
     max_len: int
-    chapters_stats: [gather_stats.ChapterStat]
-    search_results: []
+    chapters_stats: List[gather_stats.ChapterStat]
+    search_results: List[Line2D]
     cur_aggregates: []
-    chapter_lines: []
+    chapter_lines: List[LineCollection]
+
+    chapter_labels: List[Text]
 
     def __new__(self):
         if not hasattr(self, 'instance'):
@@ -23,6 +29,7 @@ class SingletonSearchData(object):
         self.search_results = []
         self.cur_aggregates = []
         self.chapter_lines = []
+        self.chapter_labels = []
         return self.instance
 
     def clear_aggregates(self):
@@ -40,23 +47,30 @@ class SingletonSearchData(object):
             line.remove()
         self.chapter_lines = []
 
+    def clear_chapter_labels(self):
+        for label in self.chapter_labels:
+            label.remove()
+        self.chapter_labels = []
+
     def clear_slate(self):
         self.chapters_stats = []
         self.clear_aggregates()
         self.clear_search_results()
         self.clear_chapter_lines()
+        self.clear_chapter_labels()
 
 # global context
 class SingletonContext(object):
     #all this data is ephemeral -- changes with each search
     search_data: SingletonSearchData
 
+    x_zoom_ratio = 1.
+
     # all else is plot stuff -- not ephemeral
     ax: plt.Axes
     fig: plt.Figure
 
     init_x_lim: float
-    prex_x_bounds: float
     init_y_bounds: float
     search_term_input: TextBox
 
@@ -72,6 +86,8 @@ def vis_chapter(chapter_stats, y_offset):
     y = y_offset
 
     line_len = (line_x_end - line_x_start) * (chapter_stats.char_length / context.search_data.max_len)
+
+    add_chapter_label(y, chapter_stats.chapter_number)
 
     t1 = plt.hlines(y, line_x_start, line_x_start + line_len)
     t2 = plt.vlines(line_x_start, y - bounds_height, y + bounds_height)
@@ -97,8 +113,8 @@ def add_aggregate_label(x, y, width, aggregate_size):
                           color=(1, green_val, 0))
     context.search_data.cur_aggregates.append(new_patch)
     context.ax.add_patch(new_patch)
-    context.search_data.cur_aggregates.append(plt.text(x + width / 2 - aggregate_label_centre_shift,
-                                           y - aggregate_label_centre_shift,
+    context.search_data.cur_aggregates.append(plt.text(x + width / 2 - aggregate_label_centre_shift * context.x_zoom_ratio,
+                                           y - label_centre_shift,
                                            str(aggregate_size), zorder=z_order_aggregate_label))
 
 def aggregate_chapter_pos(chapter_stats, y_offset, coalesce_width):
@@ -129,17 +145,32 @@ def callback_x_bounds_changed(axes):
     global context
 
     (bot, top) = axes.get_xlim()
-    bounds = round(top) - round(bot)
-    if bounds != context.prex_x_bounds:
+    bounds = top - bot
+    context.x_zoom_ratio = bounds / context.init_x_lim
+    if bounds / context.init_x_lim != 1:
         context.search_data.clear_aggregates()
-        aggregate_all(aggregate_base_distance_thresh * bounds / context.init_x_lim)
-        context.prex_x_bounds = bounds
+        aggregate_all(aggregate_base_distance_thresh * context.x_zoom_ratio)
+
+        context.search_data.clear_chapter_labels()
+        count = 0
+        for chapter in context.search_data.chapters_stats:
+            add_chapter_label(top_margin * count, chapter.chapter_number)
+            count -= 1
+
+def add_chapter_label(y, chapter_num):
+    x = line_x_start - chapter_label_x_pad * context.x_zoom_ratio
+    context.search_data.chapter_labels.append(plt.text(x,
+                                                       y - label_centre_shift,
+                                                       "Chapter " + str(chapter_num),
+                                                       horizontalalignment='right'
+                                                       )
+                                              )
 
 def callback_y_bounds_changed(axes):
     global context
 
     (bot, top) = axes.get_ylim()
-    bounds = round(top) - round(bot)
+    bounds = top - bot
     if bounds != context.init_y_bounds:
         # maintain the Y size
         # TODO: maybe dont fix it to bot
@@ -162,17 +193,16 @@ def create_and_populate_graph():
     context.ax.set_ylim(window_y_start, window_y_end)
 
     (a, b) = context.ax.get_xlim()
-    context.init_x_lim = round(b) - round(a)
-    context.prex_x_bounds = context.init_x_lim
+    context.init_x_lim = b - a
 
     (a, b) = context.ax.get_ylim()
-    context.init_y_bounds = round(b) - round(a)
+    context.init_y_bounds = b - a
 
     cb_registry = context.ax.callbacks
     cidx = cb_registry.connect('xlim_changed', callback_x_bounds_changed)
     cidy = cb_registry.connect('ylim_changed', callback_y_bounds_changed)
 
-    driver("an improbable text")
+    driver(default_search_text)
     plt.axis('off')
 
     context.search_term_input = TextBox(plt.axes([0.2, 0.85, 0.1, 0.05]), "Search term")
@@ -183,7 +213,7 @@ def create_and_populate_graph():
 def driver(search_term):
     global context
     if search_term == "":
-        driver("an improbable text")
+        driver(default_search_text)
         return
     context.search_data.chapters_stats = gather_stats.get_chapters_stats(search_term)
     context.search_data.max_len = -1
