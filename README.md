@@ -19,3 +19,11 @@ TODO:
 - maybe have a unified mode rather than broken down by chapter (this will be ugly probably)
 - support odt
 - rn the textinput has default behaviour where either \<ENTER\> or \<clicking away from textinput\> triggers the callback. <br>  I would like it to only be on \<ENTER\>, as rn it will most likely cause one redundant callback invocation >:(
+
+pondering:
+have three modes: [by chapter, unified, single chapter (a subtype of unified)]
+each of the two main modes by (chapter, unified) have different functions supporting them.
+This is because having single functions deal with both generally is difficult :(
+for ex: gather_stats.py: get_stats_by_chapter(), get_stats_unified
+        plot.py:         vis_by_chapter(), vis_unified(),   // maybe these can have a single general purpose func, or at most a modest wrapper
+                         spotlight_by_chapter(), spotlight_unified() // maybe these can have a single general purpose func, or at most a modest wrapper

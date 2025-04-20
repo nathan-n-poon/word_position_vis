@@ -27,4 +27,10 @@ window_y_end = 10
 chapter_label_x_pad = 0.1
 label_centre_shift = 0.125
 
+zoom_sens = 0.01
+
+search_axes = [0.2, 0.85, 0.1, 0.05]
+spotlight_axes = [0.5, 0.85, 0.1, 0.05]
+
+
 default_search_text = "an improbable text a̶n̶d̴ ̶s̶o̷m̶e̵ ̵u̸n̶i̵c̶o̶d̵e̸ ̶m̸a̶d̸n̸e̵s̵s̶!̴"

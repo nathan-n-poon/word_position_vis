@@ -1,3 +1,4 @@
+from math import sqrt
 from typing import List
 
 import matplotlib
@@ -12,24 +13,53 @@ from matplotlib.widgets import Button, TextBox
 import gather_stats
 from consts import *
 
+class coords(object):
+    x: float
+    y: float
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+class ChapterRenderDeets(object):
+    occ_pos_norm: list[float]
+    occ_pos_plot_loc: list[coords]
+
+    def __init__(self):
+        self.occ_pos_norm = []
+        self.occ_pos_plot_loc = []
+
+class Chapter(object):
+    render_deets: ChapterRenderDeets
+    chapter_stat: gather_stats.ChapterStat
+
+    def __init__(self, chapter_stat):
+        self.render_deets = ChapterRenderDeets()
+        self.chapter_stat = chapter_stat
+
 class SingletonSearchData(object):
     max_len: int
-    chapters_stats: List[gather_stats.ChapterStat]
-    search_results: List[Line2D]
+    chapters: List[Chapter]
+    markers: List[Line2D]
     cur_aggregates: []
     chapter_lines: List[LineCollection]
 
     chapter_labels: List[Text]
 
+    #int is index to specific instance in chapter
+    spotlight_marker: (Chapter, int)
+    spotlight_search_scope: list[coords]
+
     def __new__(self):
         if not hasattr(self, 'instance'):
           self.instance = super(SingletonSearchData, self).__new__(self)
         self.max_len = 0
-        self.chapters_stats = []
-        self.search_results = []
+        self.chapters = []
+        self.markers = []
         self.cur_aggregates = []
         self.chapter_lines = []
         self.chapter_labels = []
+        self.spotlight_search_scope = []
         return self.instance
 
     def clear_aggregates(self):
@@ -38,9 +68,9 @@ class SingletonSearchData(object):
         self.cur_aggregates = []
 
     def clear_search_results(self):
-        for result in self.search_results:
+        for result in self.markers:
             result.remove()
-        self.search_results = []
+        self.markers = []
 
     def clear_chapter_lines(self):
         for line in self.chapter_lines:
@@ -53,7 +83,7 @@ class SingletonSearchData(object):
         self.chapter_labels = []
 
     def clear_slate(self):
-        self.chapters_stats = []
+        self.chapters = []
         self.clear_aggregates()
         self.clear_search_results()
         self.clear_chapter_lines()
@@ -80,28 +110,28 @@ class SingletonContext(object):
           self.search_data = SingletonSearchData()
         return self.instance
 
-def vis_chapter(chapter_stats, y_offset):
+def vis_chapter(chapter, y_offset):
     global context
     # draw lines
     y = y_offset
 
-    line_len = (line_x_end - line_x_start) * (chapter_stats.char_length / context.search_data.max_len)
+    line_len = (line_x_end - line_x_start) * (chapter.chapter_stat.char_length / context.search_data.max_len)
 
-    add_chapter_label(y, chapter_stats.chapter_number)
+    add_chapter_label(y, chapter.chapter_stat.chapter_number)
 
     t1 = plt.hlines(y, line_x_start, line_x_start + line_len)
     t2 = plt.vlines(line_x_start, y - bounds_height, y + bounds_height)
     t3 = plt.vlines(line_x_start + line_len, y - bounds_height, y + bounds_height)
     context.search_data.chapter_lines.extend([t1,t2,t3])
 
-    for pos in chapter_stats.occ_pos_norm:
+    for pos in chapter.render_deets.occ_pos_norm:
         plot_loc = line_len * pos + line_x_start
-        chapter_stats.occ_pos_plot_loc.append(plot_loc)
+        chapter.render_deets.occ_pos_plot_loc.append(coords(plot_loc, y))
 
         temp = plt.plot(plot_loc, y,
                  marker='|', markersize=marker_size,
                  markeredgecolor=marker_default_colour)
-        context.search_data.search_results.extend(temp)
+        context.search_data.markers.extend(temp)
 
 def add_aggregate_label(x, y, width, aggregate_size):
     global context
@@ -123,38 +153,37 @@ def aggregate_chapter_pos(chapter_stats, y_offset, coalesce_width):
     if len(locs) < 1:
         return
 
-    aggregate_base = locs[0]
-    aggregate_apex = locs[0]
+    aggregate_base = locs[0].x
+    aggregate_apex = locs[0].x
     aggregate_size = 1
     for idx in range(len(locs)):
         if idx == 0:
             continue
-        if locs[idx] - locs[idx - 1] < coalesce_width:
-            aggregate_apex = locs[idx]
+        if locs[idx].x - locs[idx - 1].x < coalesce_width:
+            aggregate_apex = locs[idx].x
             aggregate_size += 1
         else:
             if aggregate_size > 1:
                 add_aggregate_label(aggregate_base, y_offset, (aggregate_apex - aggregate_base), aggregate_size)
-            aggregate_base = locs[idx]
-            aggregate_apex = locs[idx]
+            aggregate_base = locs[idx].x
+            aggregate_apex = locs[idx].x
             aggregate_size = 1
     if aggregate_size > 1:
         add_aggregate_label(aggregate_base, y_offset, (aggregate_apex - aggregate_base), aggregate_size)
 
 def callback_x_bounds_changed(axes):
     global context
-
     (bot, top) = axes.get_xlim()
     bounds = top - bot
     context.x_zoom_ratio = bounds / context.init_x_lim
-    if bounds / context.init_x_lim != 1:
+    if abs(bounds / context.init_x_lim - 1) > zoom_sens:
         context.search_data.clear_aggregates()
         aggregate_all(aggregate_base_distance_thresh * context.x_zoom_ratio)
 
         context.search_data.clear_chapter_labels()
         count = 0
-        for chapter in context.search_data.chapters_stats:
-            add_chapter_label(top_margin * count, chapter.chapter_number)
+        for chapter in context.search_data.chapters:
+            add_chapter_label(top_margin * count, chapter.chapter_stat.chapter_number)
             count -= 1
 
 def add_chapter_label(y, chapter_num):
@@ -168,7 +197,6 @@ def add_chapter_label(y, chapter_num):
 
 def callback_y_bounds_changed(axes):
     global context
-
     (bot, top) = axes.get_ylim()
     bounds = top - bot
     if bounds != context.init_y_bounds:
@@ -180,8 +208,8 @@ def aggregate_all(coalesce_width):
     global context
 
     count = 0
-    for chapter_stats in context.search_data.chapters_stats:
-        aggregate_chapter_pos(chapter_stats, top_margin * count, coalesce_width)
+    for chapter in context.search_data.chapters:
+        aggregate_chapter_pos(chapter.render_deets, top_margin * count, coalesce_width)
         count -= 1
 
 def create_and_populate_graph():
@@ -205,8 +233,14 @@ def create_and_populate_graph():
     driver(default_search_text)
     plt.axis('off')
 
-    context.search_term_input = TextBox(plt.axes([0.2, 0.85, 0.1, 0.05]), "Search term")
+    context.search_term_input = TextBox(plt.axes(search_axes), "Search term")
     context.search_term_input.on_submit(refresh)
+
+    #TODO
+    butt = Button(plt.axes(spotlight_axes), "Nearest Marker Button!!!!")
+    butt.on_clicked(get_nearest_marker)
+    #end TODO
+
     plt.sca(context.ax)
     plt.show()
 
@@ -215,21 +249,23 @@ def driver(search_term):
     if search_term == "":
         driver(default_search_text)
         return
-    context.search_data.chapters_stats = gather_stats.get_chapters_stats(search_term)
+    chapter_stats = gather_stats.get_stats(search_term)
+    for chapter_stat in chapter_stats:
+        context.search_data.chapters.append(Chapter(chapter_stat))
     context.search_data.max_len = -1
 
-    for chapter_stats in context.search_data.chapters_stats:
-        if chapter_stats.char_length > context.search_data.max_len:
-            context.search_data.max_len = chapter_stats.char_length
+    for chapter in context.search_data.chapters:
+        if chapter.chapter_stat.char_length > context.search_data.max_len:
+            context.search_data.max_len = chapter.chapter_stat.char_length
 
     # separate for loop, maybe less cache hit but idgad
-    for chapter_stats in context.search_data.chapters_stats:
-        for i in range(len(chapter_stats.occurrence_pos)):
-            chapter_stats.occ_pos_norm.append(chapter_stats.occurrence_pos[i] / chapter_stats.char_length)
+    for chapter in context.search_data.chapters:
+        for i in range(len(chapter.chapter_stat.occurrence_pos)):
+            chapter.render_deets.occ_pos_norm.append(chapter.chapter_stat.occurrence_pos[i] / chapter.chapter_stat.char_length)
 
     count = 0
-    for chapter_stats in context.search_data.chapters_stats:
-        vis_chapter(chapter_stats, top_margin * count)
+    for chapter in context.search_data.chapters:
+        vis_chapter(chapter, top_margin * count)
         count -= 1
 
     aggregate_all(aggregate_base_distance_thresh)
@@ -241,6 +277,42 @@ def refresh(term):
     context.search_data.clear_slate()
     # context.search_term_input.remove()
     driver(term)
+
+    #TODO
+    context.search_data.spotlight_search_scope =  context.search_data.chapters[3].render_deets.occ_pos_plot_loc
+    #end TODO
+
+
+def get_nearest_marker(event):
+    global context
+
+    pos_list = context.search_data.spotlight_search_scope
+    print("here")
+    if len(pos_list) == 0:
+        return
+
+    (x_bot, x_top) = context.ax.get_xlim()
+    (y_bot, y_top) = context.ax.get_ylim()
+
+    centre = coords((x_bot + x_top) / 2,
+              (y_bot + y_bot) / 2)
+
+    print("centre: " + str(centre.x))
+    min_dis = get_dis(centre, pos_list[0])
+    min_pos = pos_list[0]
+    for pos in pos_list:
+        x = get_dis(centre, pos)
+        if x < min_dis:
+            min_dis = x
+            min_pos = pos
+    print(min_pos.x)
+
+
+def get_dis(coords_a, coords_b):
+    return sqrt(
+                abs(coords_a.x - coords_b.x) ** 2 +
+                abs(coords_a.y - coords_b.y) ** 2
+    )
 
 context = SingletonContext()
 create_and_populate_graph()

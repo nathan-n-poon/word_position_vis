@@ -6,13 +6,15 @@ class ChapterStat:
     chapter_number: int
     char_length: int
     occurrence_pos: list[int]
-    occ_pos_norm: list[float]
-    occ_pos_plot_loc: list[float]
+
+class MonolithStats:
+    char_length: int=0
+    occurrence_pos: list[int]=[]
 
 chapter_stats = []
+monolith_stats = MonolithStats()
 
-search_token = "and"
-
+# search_token = "and"
 
 def search_line(needle, line, base_offset):
     positions = []
@@ -30,7 +32,9 @@ def find_sub(needle, haystack):
         return -1
     return x.start()
 
-def get_chapters_stats(search_token):
+#TODO: create variant for just monolith_stats
+#should be separate variant?  I think so....
+def get_stats(search_token):
     global chapter_stats
     chapter_stats = []
     with open("input.txt") as text:
@@ -50,9 +54,7 @@ def get_chapters_stats(search_token):
                 if line.find(upper_bound) >= 0:
                     chapter_stats.append(ChapterStat(chapter_number=chapter_count,
                                                      char_length=chapter_len,
-                                                     occurrence_pos=chapter_occurrence_pos,
-                                                     occ_pos_norm=[],
-                                                     occ_pos_plot_loc=[]))
+                                                     occurrence_pos=chapter_occurrence_pos))
 
                     chapter_count += 1
                     bottom_bound = "Chapter " + str(chapter_count)
@@ -68,8 +70,6 @@ def get_chapters_stats(search_token):
                 curr_chapter_offset += len(line)
         chapter_stats.append(ChapterStat(chapter_number=chapter_count,
                                          char_length=chapter_len,
-                                         occurrence_pos=chapter_occurrence_pos,
-                                         occ_pos_norm=[],
-                                         occ_pos_plot_loc=[]))
+                                         occurrence_pos=chapter_occurrence_pos))
         return chapter_stats
 
