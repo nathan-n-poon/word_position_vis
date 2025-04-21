@@ -48,7 +48,6 @@ class SingletonSearchData(object):
 
     #int is index to specific instance in chapter
     spotlight_marker: (Chapter, int)
-    spotlight_search_scope: list[coords]
 
     def __new__(self):
         if not hasattr(self, 'instance'):
@@ -59,7 +58,6 @@ class SingletonSearchData(object):
         self.cur_aggregates = []
         self.chapter_lines = []
         self.chapter_labels = []
-        self.spotlight_search_scope = []
         return self.instance
 
     def clear_aggregates(self):
@@ -238,7 +236,9 @@ def create_and_populate_graph():
 
     #TODO
     butt = Button(plt.axes(spotlight_axes), "Nearest Marker Button!!!!")
-    butt.on_clicked(get_nearest_marker)
+    print(id(context.search_data.chapters[3].render_deets.occ_pos_plot_loc))
+    butt_call = factory_get_nearest_marker(context.search_data.chapters[3].render_deets.occ_pos_plot_loc)
+    butt.on_clicked(butt_call)
     #end TODO
 
     plt.sca(context.ax)
@@ -278,35 +278,31 @@ def refresh(term):
     # context.search_term_input.remove()
     driver(term)
 
-    #TODO
-    context.search_data.spotlight_search_scope =  context.search_data.chapters[3].render_deets.occ_pos_plot_loc
-    #end TODO
+def factory_get_nearest_marker(spotlight_search_scope):
+    print(id(spotlight_search_scope))
+    def get_nearest_marker(event):
+        print("here")
+        print(id(spotlight_search_scope))
+        print(id(context.search_data.chapters[3].render_deets.occ_pos_plot_loc))
+        if len(spotlight_search_scope) == 0:
+            return
 
+        (x_bot, x_top) = context.ax.get_xlim()
+        (y_bot, y_top) = context.ax.get_ylim()
 
-def get_nearest_marker(event):
-    global context
+        centre = coords((x_bot + x_top) / 2,
+                  (y_bot + y_bot) / 2)
 
-    pos_list = context.search_data.spotlight_search_scope
-    print("here")
-    if len(pos_list) == 0:
-        return
-
-    (x_bot, x_top) = context.ax.get_xlim()
-    (y_bot, y_top) = context.ax.get_ylim()
-
-    centre = coords((x_bot + x_top) / 2,
-              (y_bot + y_bot) / 2)
-
-    print("centre: " + str(centre.x))
-    min_dis = get_dis(centre, pos_list[0])
-    min_pos = pos_list[0]
-    for pos in pos_list:
-        x = get_dis(centre, pos)
-        if x < min_dis:
-            min_dis = x
-            min_pos = pos
-    print(min_pos.x)
-
+        print("centre: " + str(centre.x))
+        min_dis = get_dis(centre, spotlight_search_scope[0])
+        min_pos = spotlight_search_scope[0]
+        for pos in spotlight_search_scope:
+            x = get_dis(centre, pos)
+            if x < min_dis:
+                min_dis = x
+                min_pos = pos
+        print(min_pos.x)
+    return get_nearest_marker
 
 def get_dis(coords_a, coords_b):
     return sqrt(
