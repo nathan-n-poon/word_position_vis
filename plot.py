@@ -175,16 +175,17 @@ def callback_x_bounds_changed(axes):
     global context
     (bot, top) = axes.get_xlim()
     bounds = top - bot
-    context.x_zoom_ratio = bounds / context.init_x_lim
-    if abs(bounds / context.init_x_lim - 1) > zoom_sens:
+    temp_ratio = bounds / context.init_x_lim
+    if abs(temp_ratio / context.x_zoom_ratio - 1) > zoom_sens:
         context.search_data.clear_aggregates()
-        aggregate_all(aggregate_base_distance_thresh * context.x_zoom_ratio)
+        aggregate_all(aggregate_base_distance_thresh * temp_ratio)
 
         context.search_data.clear_chapter_labels()
         count = 0
         for chapter in context.search_data.chapters:
             add_chapter_label(top_margin * count, chapter.chapter_stat.chapter_number)
             count -= 1
+    context.x_zoom_ratio = temp_ratio
 
 def add_chapter_label(y, chapter_num):
     x = line_x_start - chapter_label_x_pad * context.x_zoom_ratio
@@ -222,6 +223,7 @@ def create_and_populate_graph():
 
     (a, b) = context.ax.get_xlim()
     context.init_x_lim = b - a
+    context.x_zoom_ratio = context.init_x_lim
 
     (a, b) = context.ax.get_ylim()
     context.init_y_bounds = b - a
@@ -273,7 +275,6 @@ def driver(search_term):
 def refresh(term):
     global context
 
-    print("refresh")
     context.search_data.clear_slate()
     # context.search_term_input.remove()
     driver(term)
@@ -287,7 +288,6 @@ def get_nearest_marker(event):
     global context
 
     pos_list = context.search_data.spotlight_search_scope
-    print("here")
     if len(pos_list) == 0:
         return
 
@@ -305,7 +305,20 @@ def get_nearest_marker(event):
         if x < min_dis:
             min_dis = x
             min_pos = pos
-    print(min_pos.x)
+    move_camera(min_pos)
+
+def move_camera(target_pos: coords):
+    global context
+    print("moving to " + str(target_pos.x) + " ," + str(target_pos.y))
+    (a, b) = context.ax.get_xlim()
+    curr_width = b - a
+    context.ax.set_xlim(target_pos.x - curr_width/2,
+                        target_pos.x + curr_width/2)
+
+    (a, b) = context.ax.get_ylim()
+    curr_height = b - a
+    context.ax.set_ylim(target_pos.y - curr_height / 2,
+                        target_pos.y + curr_height / 2)
 
 
 def get_dis(coords_a, coords_b):
