@@ -143,7 +143,9 @@ def add_aggregate_label(x, y, width, aggregate_size):
                           color=(1, green_val, 0))
     context.search_data.cur_aggregates.append(new_patch)
     context.ax.add_patch(new_patch)
-    context.search_data.cur_aggregates.append(plt.text(x + width / 2 - aggregate_label_centre_shift * context.x_zoom_ratio,
+
+    context.search_data.cur_aggregates.append(plt.text(
+                                           x + width / 2 - aggregate_label_centre_shift * context.x_zoom_ratio,
                                            y - label_centre_shift,
                                            str(aggregate_size), zorder=z_order_aggregate_label))
 
@@ -176,7 +178,9 @@ def callback_x_bounds_changed(axes):
     (bot, top) = axes.get_xlim()
     bounds = top - bot
     temp_ratio = bounds / context.init_x_lim
-    if abs(temp_ratio / context.x_zoom_ratio - 1) > zoom_sens:
+    temp_cond = abs(temp_ratio / context.x_zoom_ratio - 1) > zoom_sens
+    context.x_zoom_ratio = temp_ratio
+    if temp_cond:
         context.search_data.clear_aggregates()
         aggregate_all(aggregate_base_distance_thresh * temp_ratio)
 
@@ -185,7 +189,6 @@ def callback_x_bounds_changed(axes):
         for chapter in context.search_data.chapters:
             add_chapter_label(top_margin * count, chapter.chapter_stat.chapter_number)
             count -= 1
-    context.x_zoom_ratio = temp_ratio
 
 def add_chapter_label(y, chapter_num):
     x = line_x_start - chapter_label_x_pad * context.x_zoom_ratio
@@ -223,7 +226,7 @@ def create_and_populate_graph():
 
     (a, b) = context.ax.get_xlim()
     context.init_x_lim = b - a
-    context.x_zoom_ratio = context.init_x_lim
+    context.x_zoom_ratio = 1
 
     (a, b) = context.ax.get_ylim()
     context.init_y_bounds = b - a
