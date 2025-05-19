@@ -104,6 +104,8 @@ class SingletonContext(object):
     init_y_bounds: float
     search_term_input: TextBox
 
+    spotlight_nav_idx = 0
+
     def __new__(self):
         if not hasattr(self, 'instance'):
           self.instance = super(SingletonContext, self).__new__(self)
@@ -303,12 +305,28 @@ def get_nearest_marker(event):
     print("centre: " + str(centre.x))
     min_dis = get_dis(centre, pos_list[0])
     min_pos = pos_list[0]
-    for pos in pos_list:
-        x = get_dis(centre, pos)
+    context.spotlight_nav_idx = 0
+    i = 0
+    for i in range(len(pos_list)):
+        x = get_dis(centre, pos_list[i])
         if x < min_dis:
             min_dis = x
-            min_pos = pos
+            min_pos = pos_list[i]
+            context.spotlight_nav_idx = i
     move_camera(min_pos)
+    create_nav_buttons()
+
+def create_nav_buttons():
+    global context
+
+    pos_list = context.search_data.spotlight_search_scope
+    butt_prev = Button(plt.axes(nav_prev_axes), "Nearest Marker Button!!!!")
+
+    def move_next(event):
+        context.spotlight_nav_idx += 1
+        move_camera(pos_list[context.spotlight_nav_idx])
+    butt_prev.on_clicked(move_next)
+    return
 
 def move_camera(target_pos: coords):
     global context
