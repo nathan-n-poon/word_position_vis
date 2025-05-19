@@ -105,6 +105,9 @@ class SingletonContext(object):
     search_term_input: TextBox
 
     spotlight_nav_idx = 0
+    spotlight_next_butt: Button
+    spotlight_prev_butt: Button
+
 
     def __new__(self):
         if not hasattr(self, 'instance'):
@@ -318,14 +321,16 @@ def get_nearest_marker(event):
 
 def create_nav_buttons():
     global context
-
+    print("creating")
     pos_list = context.search_data.spotlight_search_scope
-    butt_prev = Button(plt.axes(nav_prev_axes), "Nearest Marker Button!!!!")
+    butt_next = Button(plt.axes(nav_next_axes), "next instance")
 
     def move_next(event):
-        context.spotlight_nav_idx += 1
+        print("next")
+        context.spotlight_nav_idx = (context.spotlight_nav_idx + 1) % len(pos_list)
         move_camera(pos_list[context.spotlight_nav_idx])
-    butt_prev.on_clicked(move_next)
+    butt_next.on_clicked(move_next)
+    context.spotlight_next_butt = butt_next
     return
 
 def move_camera(target_pos: coords):
