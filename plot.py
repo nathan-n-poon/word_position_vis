@@ -107,6 +107,7 @@ class SingletonContext(object):
     spotlight_nav_idx = 0
     spotlight_next_butt: Button
     spotlight_prev_butt: Button
+    spotlight_bounds: (0., 0.)
 
 
     def __new__(self):
@@ -178,8 +179,9 @@ def aggregate_chapter_pos(chapter_stats, y_offset, coalesce_width):
     if aggregate_size > 1:
         add_aggregate_label(aggregate_base, y_offset, (aggregate_apex - aggregate_base), aggregate_size)
 
-def callback_x_bounds_changed(axes):
+def cb_x_zoom_reaggregate(axes):
     global context
+
     (bot, top) = axes.get_xlim()
     bounds = top - bot
     temp_ratio = bounds / context.init_x_lim
@@ -204,7 +206,7 @@ def add_chapter_label(y, chapter_num):
                                                        )
                                               )
 
-def callback_y_bounds_changed(axes):
+def cb_y_zoom_set_pos(axes):
     global context
     (bot, top) = axes.get_ylim()
     bounds = top - bot
@@ -220,6 +222,13 @@ def aggregate_all(coalesce_width):
     for chapter in context.search_data.chapters:
         aggregate_chapter_pos(chapter.render_deets, top_margin * count, coalesce_width)
         count -= 1
+
+def cb_xy_moved_remove_nav(axes):
+    global context
+
+    current_bounds = (context.ax.get_xlim, context.ax.get_ylim)
+    # if current_bounds != context.spotlight_bounds:
+    #     context.spotlight_next_butt = None
 
 def create_and_populate_graph():
     global context
@@ -237,8 +246,11 @@ def create_and_populate_graph():
     context.init_y_bounds = b - a
 
     cb_registry = context.ax.callbacks
-    cidx = cb_registry.connect('xlim_changed', callback_x_bounds_changed)
-    cidy = cb_registry.connect('ylim_changed', callback_y_bounds_changed)
+    cb_registry.connect('xlim_changed', cb_x_zoom_reaggregate)
+    cb_registry.connect('ylim_changed', cb_y_zoom_set_pos)
+
+    cb_registry.connect('xlim_changed', cb_xy_moved_remove_nav)
+    cb_registry.connect('ylim_changed', cb_xy_moved_remove_nav)
 
     driver(default_search_text)
     plt.axis('off')
@@ -247,7 +259,7 @@ def create_and_populate_graph():
     context.search_term_input.on_submit(refresh)
 
     #TODO
-    butt = Button(plt.axes(spotlight_axes), "Nearest Marker Button!!!!")
+    butt = Button(plt.axes(spotlight_axes), "Find!")
     butt.on_clicked(get_nearest_marker)
     #end TODO
 
@@ -291,10 +303,15 @@ def refresh(term):
     context.search_data.spotlight_search_scope =  context.search_data.chapters[3].render_deets.occ_pos_plot_loc
     #end TODO
 
+def update_spotlight_bounds():
+    global context
+
+    context.spotlight_bounds = (context.ax.get_xlim, context.ax.get_ylim)
 
 def get_nearest_marker(event):
     global context
 
+    update_spotlight_bounds()
     pos_list = context.search_data.spotlight_search_scope
     if len(pos_list) == 0:
         return
@@ -321,16 +338,24 @@ def get_nearest_marker(event):
 
 def create_nav_buttons():
     global context
-    print("creating")
-    pos_list = context.search_data.spotlight_search_scope
-    butt_next = Button(plt.axes(nav_next_axes), "next instance")
 
-    def move_next(event):
-        print("next")
-        context.spotlight_nav_idx = (context.spotlight_nav_idx + 1) % len(pos_list)
-        move_camera(pos_list[context.spotlight_nav_idx])
-    butt_next.on_clicked(move_next)
+    pos_list = context.search_data.spotlight_search_scope
+    butt_next = Button(plt.axes(nav_next_axes), ">")
+    butt_prev = Button(plt.axes(nav_prev_axes), "<")
+    plt.sca(context.ax)
+
+    def move_factory(direction: int):
+        def move_func(event):
+            context.spotlight_nav_idx = (context.spotlight_nav_idx + direction) % len(pos_list)
+            move_camera(pos_list[context.spotlight_nav_idx])
+            update_spotlight_bounds()
+        return move_func
+
+    butt_next.on_clicked(move_factory(1))
+    butt_prev.on_clicked(move_factory(-1))
     context.spotlight_next_butt = butt_next
+    context.spotlight_prev_butt = butt_prev
+
     return
 
 def move_camera(target_pos: coords):

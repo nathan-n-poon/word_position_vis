@@ -30,7 +30,14 @@ label_centre_shift = 0.125
 zoom_sens = 0.01
 
 search_axes = [0.2, 0.85, 0.1, 0.05]
-spotlight_axes = [0.5, 0.85, 0.1, 0.05]
+
+spotlight_butt_width = 0.1
+spotlight_butt_height = 0.05
+spotlight_x = 0.8
+spotlight_y = 0.85
+spotlight_axes = [spotlight_x, spotlight_y, spotlight_butt_width, spotlight_butt_height]
+nav_prev_axes = [spotlight_x, spotlight_y - spotlight_butt_height, spotlight_butt_width/2, spotlight_butt_height]
+nav_next_axes = [spotlight_x + spotlight_butt_width/2, spotlight_y - spotlight_butt_height, spotlight_butt_width/2, spotlight_butt_height]
 
 
 default_search_text = "an improbable text a̶n̶d̴ ̶s̶o̷m̶e̵ ̵u̸n̶i̵c̶o̶d̵e̸ ̶m̸a̶d̸n̸e̵s̵s̶!̴"
