@@ -38,6 +38,6 @@ spotlight_y = 0.85
 spotlight_axes = [spotlight_x, spotlight_y, spotlight_butt_width, spotlight_butt_height]
 nav_prev_axes = [spotlight_x, spotlight_y - spotlight_butt_height, spotlight_butt_width/2, spotlight_butt_height]
 nav_next_axes = [spotlight_x + spotlight_butt_width/2, spotlight_y - spotlight_butt_height, spotlight_butt_width/2, spotlight_butt_height]
-
+nav_init_bounds = ((0., 0.), (0., 0.))
 
 default_search_text = "an improbable text a̶n̶d̴ ̶s̶o̷m̶e̵ ̵u̸n̶i̵c̶o̶d̵e̸ ̶m̸a̶d̸n̸e̵s̵s̶!̴"

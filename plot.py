@@ -107,13 +107,17 @@ class SingletonContext(object):
     spotlight_nav_idx = 0
     spotlight_next_butt: Button
     spotlight_prev_butt: Button
-    spotlight_bounds: (0., 0.)
+    spotlight_bounds = nav_init_bounds
 
+    spotlight_find_ax: plt.Axes
+    spotlight_prev_ax: plt.Axes
+    spotlight_next_ax: plt.Axes
 
     def __new__(self):
         if not hasattr(self, 'instance'):
           self.instance = super(SingletonContext, self).__new__(self)
           self.search_data = SingletonSearchData()
+
         return self.instance
 
 def vis_chapter(chapter, y_offset):
@@ -223,12 +227,32 @@ def aggregate_all(coalesce_width):
         aggregate_chapter_pos(chapter.render_deets, top_margin * count, coalesce_width)
         count -= 1
 
+def compare_tolerance(tolerance: float, lhs: float, rhs: float):
+    ratio = lhs/rhs
+    if abs(ratio) > 1:
+        ratio = 1 / ratio
+    return tolerance < abs(ratio)
+
+def compare_bounds_tolerance(tolerance: float, lhbounds, rhbounds):
+    return compare_tolerance(tolerance, lhbounds[0][0], rhbounds[0][0]) and compare_tolerance(tolerance, lhbounds[0][1], rhbounds[0][1]) and compare_tolerance(tolerance, lhbounds[1][0], rhbounds[1][0]) and compare_tolerance(tolerance, lhbounds[1][1], rhbounds[1][1])
+
+def del_button(del_me: Button):
+    del_me.ax.patch.set_visible(False)
+    del_me.label.set_visible(False)
+    del_me.ax.axis("off")
+    del del_me
+
 def cb_xy_moved_remove_nav(axes):
     global context
 
-    current_bounds = (context.ax.get_xlim, context.ax.get_ylim)
-    # if current_bounds != context.spotlight_bounds:
-    #     context.spotlight_next_butt = None
+    current_bounds = (context.ax.get_xlim(), context.ax.get_ylim())
+    if context.spotlight_bounds != nav_init_bounds:
+        if not compare_bounds_tolerance(0.9, current_bounds, context.spotlight_bounds):
+            if hasattr(context, "spotlight_next_butt"):
+                print("oof")
+                del_button(context.spotlight_next_butt)
+                del_button(context.spotlight_prev_butt)
+
 
 def create_and_populate_graph():
     global context
@@ -259,7 +283,8 @@ def create_and_populate_graph():
     context.search_term_input.on_submit(refresh)
 
     #TODO
-    butt = Button(plt.axes(spotlight_axes), "Find!")
+    context.spotlight_find_ax = plt.axes(spotlight_axes)
+    butt = Button(context.spotlight_find_ax, "Find!")
     butt.on_clicked(get_nearest_marker)
     #end TODO
 
@@ -303,15 +328,9 @@ def refresh(term):
     context.search_data.spotlight_search_scope =  context.search_data.chapters[3].render_deets.occ_pos_plot_loc
     #end TODO
 
-def update_spotlight_bounds():
-    global context
-
-    context.spotlight_bounds = (context.ax.get_xlim, context.ax.get_ylim)
-
 def get_nearest_marker(event):
     global context
 
-    update_spotlight_bounds()
     pos_list = context.search_data.spotlight_search_scope
     if len(pos_list) == 0:
         return
@@ -340,15 +359,18 @@ def create_nav_buttons():
     global context
 
     pos_list = context.search_data.spotlight_search_scope
-    butt_next = Button(plt.axes(nav_next_axes), ">")
-    butt_prev = Button(plt.axes(nav_prev_axes), "<")
+
+    context.spotlight_next_ax = plt.axes(nav_next_axes)
+    context.spotlight_prev_ax = plt.axes(nav_prev_axes)
+
+    butt_next = Button(context.spotlight_next_ax, ">")
+    butt_prev = Button(context.spotlight_prev_ax, "<")
     plt.sca(context.ax)
 
     def move_factory(direction: int):
         def move_func(event):
             context.spotlight_nav_idx = (context.spotlight_nav_idx + direction) % len(pos_list)
             move_camera(pos_list[context.spotlight_nav_idx])
-            update_spotlight_bounds()
         return move_func
 
     butt_next.on_clicked(move_factory(1))
@@ -358,19 +380,25 @@ def create_nav_buttons():
 
     return
 
+
 def move_camera(target_pos: coords):
     global context
     print("moving to " + str(target_pos.x) + " ," + str(target_pos.y))
     (a, b) = context.ax.get_xlim()
     curr_width = b - a
-    context.ax.set_xlim(target_pos.x - curr_width/2,
-                        target_pos.x + curr_width/2)
+    bot_x = target_pos.x - curr_width / 2
+    top_x = target_pos.x + curr_width / 2
+
+    context.spotlight_bounds = ((bot_x, top_x), context.ax.get_ylim())
+    context.ax.set_xlim(bot_x, top_x)
 
     (a, b) = context.ax.get_ylim()
     curr_height = b - a
-    context.ax.set_ylim(target_pos.y - curr_height / 2,
-                        target_pos.y + curr_height / 2)
+    bot_y = target_pos.y - curr_height / 2
+    top_y = target_pos.y + curr_height / 2
 
+    context.spotlight_bounds = ((bot_x, top_x), (bot_y, top_y))
+    context.ax.set_ylim(bot_y, top_y)
 
 def get_dis(coords_a, coords_b):
     return sqrt(
