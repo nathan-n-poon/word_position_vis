@@ -12,7 +12,9 @@ from matplotlib.widgets import Button, TextBox
 
 import gather_stats
 from consts import *
-from types import *
+from my_types import *
+from aggregate_keeper import *
+from spotlight import *
 
 class SingletonSearchData(object):
     max_len: int
@@ -66,6 +68,7 @@ class SingletonSearchData(object):
 class SingletonContext(object):
     #all this data is ephemeral -- changes with each search
     search_data: SingletonSearchData
+    spotlight_manager: SpotlightWarden
 
     x_zoom_ratio = 1.
 
@@ -77,12 +80,11 @@ class SingletonContext(object):
     init_y_bounds: float
     search_term_input: TextBox
 
-
-
     def __new__(self):
         if not hasattr(self, 'instance'):
           self.instance = super(SingletonContext, self).__new__(self)
           self.search_data = SingletonSearchData()
+          self.spotlight_manager = SpotlightWarden()
 
         return self.instance
 
@@ -127,7 +129,7 @@ def cb_x_zoom_reaggregate(axes):
     context.x_zoom_ratio = temp_ratio
     if temp_cond:
         context.search_data.clear_aggregates()
-        aggregate_all(aggregate_base_distance_thresh * temp_ratio)
+        aggregate_all(context, aggregate_base_distance_thresh * temp_ratio)
 
         context.search_data.clear_chapter_labels()
         count = 0
@@ -148,12 +150,10 @@ def cb_xy_moved_remove_nav(axes):
     global context
 
     current_bounds = (context.ax.get_xlim(), context.ax.get_ylim())
-    if context.spotlight_bounds != nav_init_bounds:
-        if not compare_bounds_tolerance(0.9, current_bounds, context.spotlight_bounds):
-            if hasattr(context, "spotlight_next_butt"):
-                print("oof")
-                del_button(context.spotlight_next_butt)
-                del_button(context.spotlight_prev_butt)
+    if context.spotlight_manager.spotlight_bounds != nav_init_bounds:
+        if not context.spotlight_manager.compare_bounds_tolerance(0.9, current_bounds, context.spotlight_manager.spotlight_bounds):
+            if hasattr(context.spotlight_manager, "spotlight_next_butt"):
+                context.spotlight_manager.del_buttons()
 
 def create_and_populate_graph():
     global context
@@ -186,7 +186,7 @@ def create_and_populate_graph():
     #TODO
     context.spotlight_find_ax = plt.axes(spotlight_axes)
     butt = Button(context.spotlight_find_ax, "Find!")
-    get_marker = nearest_marker_factory()
+    get_marker = context.spotlight_manager.nearest_marker_factory(context)
     butt.on_clicked(get_marker)
     #end TODO
 
@@ -217,7 +217,7 @@ def driver(search_term):
         vis_chapter(chapter, top_margin * count)
         count -= 1
 
-    aggregate_all(aggregate_base_distance_thresh)
+    aggregate_all(context, aggregate_base_distance_thresh)
 
 def refresh(term):
     global context
@@ -227,7 +227,7 @@ def refresh(term):
     driver(term)
 
     #TODO
-    context.search_data.spotlight_search_scope =  context.search_data.chapters[3].render_deets.occ_pos_plot_loc
+    context.spotlight_manager.spotlight_search_scope =  context.search_data.chapters[3].render_deets.occ_pos_plot_loc
     #end TODO
 
 context = SingletonContext()

@@ -1,7 +1,7 @@
+from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
 
 from consts import *
-
 
 def add_aggregate_label(context, x, y, width, aggregate_size):
     # redshift the larger the aggregate
@@ -34,16 +34,15 @@ def aggregate_chapter_pos(context, chapter_stats, y_offset, coalesce_width):
             aggregate_size += 1
         else:
             if aggregate_size > 1:
-                add_aggregate_label(aggregate_base, y_offset, (aggregate_apex - aggregate_base), aggregate_size)
+                add_aggregate_label(context, aggregate_base, y_offset, (aggregate_apex - aggregate_base), aggregate_size)
             aggregate_base = locs[idx].x
             aggregate_apex = locs[idx].x
             aggregate_size = 1
     if aggregate_size > 1:
-        add_aggregate_label(aggregate_base, y_offset, (aggregate_apex - aggregate_base), aggregate_size)
+        add_aggregate_label(context, aggregate_base, y_offset, (aggregate_apex - aggregate_base), aggregate_size)
 
 def aggregate_all(context, coalesce_width):
-
     count = 0
     for chapter in context.search_data.chapters:
-        aggregate_chapter_pos(chapter.render_deets, top_margin * count, coalesce_width)
+        aggregate_chapter_pos(context, chapter.render_deets, top_margin * count, coalesce_width)
         count -= 1

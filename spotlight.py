@@ -1,16 +1,13 @@
 from math import sqrt
 
+from matplotlib.text import Text
 from matplotlib.widgets import Button
 from consts import *
 import matplotlib.pyplot as plt
-from types import *
+from my_types import *
 from aggregate_keeper import *
 
 class SpotlightWarden(object):
-
-    def __init__(self, parent_context):
-        self.parent_context = parent_context
-
     spotlight_nav_idx = 0
     spotlight_next_butt: Button
     spotlight_prev_butt: Button
@@ -38,17 +35,30 @@ class SpotlightWarden(object):
                 self.compare_tolerance(tolerance, lhbounds[1][0], rhbounds[1][0]) and
                 self.compare_tolerance(tolerance, lhbounds[1][1], rhbounds[1][1]))
 
-    def del_button(self, del_me: Button):
-        del_me.ax.patch.set_visible(False)
-        del_me.label.set_visible(False)
-        del_me.ax.axis("off")
-        del del_me
+    def del_buttons(self):
+        # self.del_button(self.spotlight_next_butt)
+        # self.del_button(self.spotlight_prev_butt)
+        self.spotlight_prev_butt.ax.patch.set_visible(False)
+        self.spotlight_prev_butt.label.set_visible(False)
 
-    def nearest_marker_factory(self):
+        self.spotlight_prev_butt.ax.axis("off")
+        del self.spotlight_prev_butt
+
+        self.spotlight_next_butt.ax.patch.set_visible(False)
+        self.spotlight_next_butt.label.set_visible(False)
+        self.spotlight_next_butt.ax.axis("off")
+        del self.spotlight_next_butt
+
+    # def del_button(self, del_me: Button):
+    #     del_me.ax.patch.set_visible(False)
+    #     del_me.label.set_visible(False)
+    #     del_me.ax.axis("off")
+    #     del del_me
+
+    def nearest_marker_factory(self, context):
         def get_nearest_marker(event):
-            context = self.parent_context
 
-            pos_list = context.search_data.spotlight_search_scope
+            pos_list = self.spotlight_search_scope
             if len(pos_list) == 0:
                 return
 
@@ -59,57 +69,52 @@ class SpotlightWarden(object):
                             (y_bot + y_bot) / 2)
 
             print("centre: " + str(centre.x))
-            min_dis = get_dis(centre, pos_list[0])
+            min_dis = self.get_dis(centre, pos_list[0])
             min_pos = pos_list[0]
-            context.spotlight_nav_idx = 0
-            i = 0
+            self.spotlight_nav_idx = 0
             for i in range(len(pos_list)):
-                x = get_dis(centre, pos_list[i])
+                x = self.get_dis(centre, pos_list[i])
                 if x < min_dis:
                     min_dis = x
                     min_pos = pos_list[i]
-                    context.spotlight_nav_idx = i
-            self.move_camera(min_pos)
-            self.create_nav_buttons()
+                    self.spotlight_nav_idx = i
+            self.move_camera(context, min_pos)
+            self.create_nav_buttons(context)
 
         return get_nearest_marker
 
-    def create_nav_buttons(self):
-        context = self.parent_context
+    def create_nav_buttons(self, context):
+        pos_list = self.spotlight_search_scope
 
-        pos_list = context.search_data.spotlight_search_scope
+        self.spotlight_next_ax = plt.axes(nav_next_axes)
+        self.spotlight_prev_ax = plt.axes(nav_prev_axes)
 
-        context.spotlight_next_ax = plt.axes(nav_next_axes)
-        context.spotlight_prev_ax = plt.axes(nav_prev_axes)
-
-        butt_next = Button(context.spotlight_next_ax, ">")
-        butt_prev = Button(context.spotlight_prev_ax, "<")
+        butt_next = Button(self.spotlight_next_ax, ">")
+        butt_prev = Button(self.spotlight_prev_ax, "<")
         plt.sca(context.ax)
 
         def move_factory(direction: int):
             def move_func(event):
-                context.spotlight_nav_idx = (context.spotlight_nav_idx + direction) % len(pos_list)
-                self.move_camera(pos_list[context.spotlight_nav_idx])
+                self.spotlight_nav_idx = (self.spotlight_nav_idx + direction) % len(pos_list)
+                self.move_camera(context, pos_list[self.spotlight_nav_idx])
 
             return move_func
 
         butt_next.on_clicked(move_factory(1))
         butt_prev.on_clicked(move_factory(-1))
-        context.spotlight_next_butt = butt_next
-        context.spotlight_prev_butt = butt_prev
+        self.spotlight_next_butt = butt_next
+        self.spotlight_prev_butt = butt_prev
 
         return
 
-    def move_camera(self, target_pos: coords):
-        context = self.parent_context
-
+    def move_camera(self, context, target_pos: coords):
         print("moving to " + str(target_pos.x) + " ," + str(target_pos.y))
         (a, b) = context.ax.get_xlim()
         curr_width = b - a
         bot_x = target_pos.x - curr_width / 2
         top_x = target_pos.x + curr_width / 2
 
-        context.spotlight_bounds = ((bot_x, top_x), context.ax.get_ylim())
+        self.spotlight_bounds = ((bot_x, top_x), context.ax.get_ylim())
         context.ax.set_xlim(bot_x, top_x)
 
         (a, b) = context.ax.get_ylim()
@@ -117,7 +122,7 @@ class SpotlightWarden(object):
         bot_y = target_pos.y - curr_height / 2
         top_y = target_pos.y + curr_height / 2
 
-        context.spotlight_bounds = ((bot_x, top_x), (bot_y, top_y))
+        self.spotlight_bounds = ((bot_x, top_x), (bot_y, top_y))
         context.ax.set_ylim(bot_y, top_y)
 
     def get_dis(self, coords_a, coords_b):
