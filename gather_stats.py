@@ -1,11 +1,6 @@
 from dataclasses import dataclass
 from re import search, escape
-
-@dataclass
-class ChapterStat:
-    chapter_number: int
-    char_length: int
-    occurrence_pos: list[int]
+from my_types import *
 
 class MonolithStats:
     char_length: int=0

@@ -1,4 +1,10 @@
-import gather_stats
+from dataclasses import dataclass
+
+@dataclass
+class ChapterStat:
+    chapter_number: int
+    char_length: int
+    occurrence_pos: list[int]
 
 class coords(object):
     x: float
@@ -18,7 +24,7 @@ class ChapterRenderDeets(object):
 
 class Chapter(object):
     render_deets: ChapterRenderDeets
-    chapter_stat: gather_stats.ChapterStat
+    chapter_stat: ChapterStat
 
     def __init__(self, chapter_stat):
         self.render_deets = ChapterRenderDeets()

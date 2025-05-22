@@ -30,10 +30,8 @@ for ex: gather_stats.py: get_stats_by_chapter(), get_stats_unified
 
 
 internal deps:
-       _____ aggregate_keeper \
-      /                        \____
-consts                          ____ spotlight ----- plot
-                               /
-gather_stats ------- my_types /
 
-// my_types shouldn't depend on gather_stats... shouldn't depend on anything
+consts ------- aggregate_keeper \__
+          _________________________ spotlight \__
+         /                                        plot
+my_types ----- gather_stats --------------------/

@@ -48,8 +48,9 @@ class SpotlightWarden(object):
     spotlight_search_scope: list[coords]
 
     def del_buttons(self):
-        del_button(self.spotlight_next_butt)
-        del_button(self.spotlight_prev_butt)
+        if hasattr(self, "spotlight_next_butt") and hasattr(self, "spotlight_prev_butt"):
+            del_button(self.spotlight_next_butt)
+            del_button(self.spotlight_prev_butt)
 
     def nearest_marker_factory(self, context):
         def get_nearest_marker(event):
@@ -98,13 +99,14 @@ class SpotlightWarden(object):
 
         butt_next.on_clicked(move_factory(1))
         butt_prev.on_clicked(move_factory(-1))
+        self.del_buttons()
         self.spotlight_next_butt = butt_next
         self.spotlight_prev_butt = butt_prev
 
         return
 
     def move_camera(self, context, target_pos: coords):
-        print("moving to " + str(target_pos.x) + " ," + str(target_pos.y))
+        # print("moving to " + str(target_pos.x) + " ," + str(target_pos.y))
         (a, b) = context.ax.get_xlim()
         curr_width = b - a
         bot_x = target_pos.x - curr_width / 2

@@ -6,6 +6,7 @@ from matplotlib.text import Text
 from matplotlib.widgets import TextBox
 
 from spotlight import *
+from gather_stats import *
 
 class SingletonSearchData(object):
     max_len: int
@@ -137,14 +138,17 @@ def cb_y_zoom_set_pos(axes):
         # TODO: maybe dont fix it to bot
         axes.set_ylim(bot, bot + context.init_y_bounds)
 
+count = 1
 def cb_xy_moved_remove_nav(axes):
     global context
+    global count
 
     current_bounds = (context.ax.get_xlim(), context.ax.get_ylim())
     if context.spotlight_manager.spotlight_bounds != nav_init_bounds:
         if not compare_bounds_tolerance(0.9, current_bounds, context.spotlight_manager.spotlight_bounds):
-            if hasattr(context.spotlight_manager, "spotlight_next_butt"):
-                context.spotlight_manager.del_buttons()
+            print("oof", count)
+            count += 1
+            context.spotlight_manager.del_buttons()
 
 def create_and_populate_graph():
     global context
@@ -189,7 +193,7 @@ def driver(search_term):
     if search_term == "":
         driver(default_search_text)
         return
-    chapter_stats = gather_stats.get_stats(search_term)
+    chapter_stats = get_stats(search_term)
     for chapter_stat in chapter_stats:
         context.search_data.chapters.append(Chapter(chapter_stat))
     context.search_data.max_len = -1
