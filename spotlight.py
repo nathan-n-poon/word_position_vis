@@ -7,6 +7,14 @@ import matplotlib.pyplot as plt
 from my_types import *
 from aggregate_keeper import *
 
+
+def del_button(del_me: Button):
+    del_me.ax.patch.set_visible(False)
+    del_me.label.set_visible(False)
+    del_me.ax.axis("off")
+    del del_me
+
+
 class SpotlightWarden(object):
     spotlight_nav_idx = 0
     spotlight_next_butt: Button
@@ -36,24 +44,8 @@ class SpotlightWarden(object):
                 self.compare_tolerance(tolerance, lhbounds[1][1], rhbounds[1][1]))
 
     def del_buttons(self):
-        # self.del_button(self.spotlight_next_butt)
-        # self.del_button(self.spotlight_prev_butt)
-        self.spotlight_prev_butt.ax.patch.set_visible(False)
-        self.spotlight_prev_butt.label.set_visible(False)
-
-        self.spotlight_prev_butt.ax.axis("off")
-        del self.spotlight_prev_butt
-
-        self.spotlight_next_butt.ax.patch.set_visible(False)
-        self.spotlight_next_butt.label.set_visible(False)
-        self.spotlight_next_butt.ax.axis("off")
-        del self.spotlight_next_butt
-
-    # def del_button(self, del_me: Button):
-    #     del_me.ax.patch.set_visible(False)
-    #     del_me.label.set_visible(False)
-    #     del_me.ax.axis("off")
-    #     del del_me
+        del_button(self.spotlight_next_butt)
+        del_button(self.spotlight_prev_butt)
 
     def nearest_marker_factory(self, context):
         def get_nearest_marker(event):
