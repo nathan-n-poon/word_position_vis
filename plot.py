@@ -12,30 +12,7 @@ from matplotlib.widgets import Button, TextBox
 
 import gather_stats
 from consts import *
-
-class coords(object):
-    x: float
-    y: float
-
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-
-class ChapterRenderDeets(object):
-    occ_pos_norm: list[float]
-    occ_pos_plot_loc: list[coords]
-
-    def __init__(self):
-        self.occ_pos_norm = []
-        self.occ_pos_plot_loc = []
-
-class Chapter(object):
-    render_deets: ChapterRenderDeets
-    chapter_stat: gather_stats.ChapterStat
-
-    def __init__(self, chapter_stat):
-        self.render_deets = ChapterRenderDeets()
-        self.chapter_stat = chapter_stat
+from types import *
 
 class SingletonSearchData(object):
     max_len: int
@@ -45,10 +22,6 @@ class SingletonSearchData(object):
     chapter_lines: List[LineCollection]
 
     chapter_labels: List[Text]
-
-    #int is index to specific instance in chapter
-    spotlight_marker: (Chapter, int)
-    spotlight_search_scope: list[coords]
 
     def __new__(self):
         if not hasattr(self, 'instance'):
@@ -104,14 +77,7 @@ class SingletonContext(object):
     init_y_bounds: float
     search_term_input: TextBox
 
-    spotlight_nav_idx = 0
-    spotlight_next_butt: Button
-    spotlight_prev_butt: Button
-    spotlight_bounds = nav_init_bounds
 
-    spotlight_find_ax: plt.Axes
-    spotlight_prev_ax: plt.Axes
-    spotlight_next_ax: plt.Axes
 
     def __new__(self):
         if not hasattr(self, 'instance'):
@@ -143,48 +109,16 @@ def vis_chapter(chapter, y_offset):
                  markeredgecolor=marker_default_colour)
         context.search_data.markers.extend(temp)
 
-def add_aggregate_label(x, y, width, aggregate_size):
-    global context
-
-    # redshift the larger the aggregate
-    green_val = max(0, 1 - (aggregate_proportional_redshift * aggregate_size))
-    new_patch = Rectangle((x, y - bounds_height), width, 2 * bounds_height,
-                          zorder=z_order_aggregate,
-                          color=(1, green_val, 0))
-    context.search_data.cur_aggregates.append(new_patch)
-    context.ax.add_patch(new_patch)
-
-    context.search_data.cur_aggregates.append(plt.text(
-                                           x + width / 2 - aggregate_label_centre_shift * context.x_zoom_ratio,
-                                           y - label_centre_shift,
-                                           str(aggregate_size), zorder=z_order_aggregate_label))
-
-def aggregate_chapter_pos(chapter_stats, y_offset, coalesce_width):
-    # cute alias
-    locs = chapter_stats.occ_pos_plot_loc
-    if len(locs) < 1:
-        return
-
-    aggregate_base = locs[0].x
-    aggregate_apex = locs[0].x
-    aggregate_size = 1
-    for idx in range(len(locs)):
-        if idx == 0:
-            continue
-        if locs[idx].x - locs[idx - 1].x < coalesce_width:
-            aggregate_apex = locs[idx].x
-            aggregate_size += 1
-        else:
-            if aggregate_size > 1:
-                add_aggregate_label(aggregate_base, y_offset, (aggregate_apex - aggregate_base), aggregate_size)
-            aggregate_base = locs[idx].x
-            aggregate_apex = locs[idx].x
-            aggregate_size = 1
-    if aggregate_size > 1:
-        add_aggregate_label(aggregate_base, y_offset, (aggregate_apex - aggregate_base), aggregate_size)
+def add_chapter_label(y, chapter_num):
+    x = line_x_start - chapter_label_x_pad * context.x_zoom_ratio
+    context.search_data.chapter_labels.append(plt.text(x,
+                                                       y - label_centre_shift,
+                                                       "Chapter " + str(chapter_num),
+                                                       horizontalalignment='right'
+                                                       )
+                                              )
 
 def cb_x_zoom_reaggregate(axes):
-    global context
 
     (bot, top) = axes.get_xlim()
     bounds = top - bot
@@ -201,15 +135,6 @@ def cb_x_zoom_reaggregate(axes):
             add_chapter_label(top_margin * count, chapter.chapter_stat.chapter_number)
             count -= 1
 
-def add_chapter_label(y, chapter_num):
-    x = line_x_start - chapter_label_x_pad * context.x_zoom_ratio
-    context.search_data.chapter_labels.append(plt.text(x,
-                                                       y - label_centre_shift,
-                                                       "Chapter " + str(chapter_num),
-                                                       horizontalalignment='right'
-                                                       )
-                                              )
-
 def cb_y_zoom_set_pos(axes):
     global context
     (bot, top) = axes.get_ylim()
@@ -218,29 +143,6 @@ def cb_y_zoom_set_pos(axes):
         # maintain the Y size
         # TODO: maybe dont fix it to bot
         axes.set_ylim(bot, bot + context.init_y_bounds)
-
-def aggregate_all(coalesce_width):
-    global context
-
-    count = 0
-    for chapter in context.search_data.chapters:
-        aggregate_chapter_pos(chapter.render_deets, top_margin * count, coalesce_width)
-        count -= 1
-
-def compare_tolerance(tolerance: float, lhs: float, rhs: float):
-    ratio = lhs/rhs
-    if abs(ratio) > 1:
-        ratio = 1 / ratio
-    return tolerance < abs(ratio)
-
-def compare_bounds_tolerance(tolerance: float, lhbounds, rhbounds):
-    return compare_tolerance(tolerance, lhbounds[0][0], rhbounds[0][0]) and compare_tolerance(tolerance, lhbounds[0][1], rhbounds[0][1]) and compare_tolerance(tolerance, lhbounds[1][0], rhbounds[1][0]) and compare_tolerance(tolerance, lhbounds[1][1], rhbounds[1][1])
-
-def del_button(del_me: Button):
-    del_me.ax.patch.set_visible(False)
-    del_me.label.set_visible(False)
-    del_me.ax.axis("off")
-    del del_me
 
 def cb_xy_moved_remove_nav(axes):
     global context
@@ -252,7 +154,6 @@ def cb_xy_moved_remove_nav(axes):
                 print("oof")
                 del_button(context.spotlight_next_butt)
                 del_button(context.spotlight_prev_butt)
-
 
 def create_and_populate_graph():
     global context
@@ -285,7 +186,8 @@ def create_and_populate_graph():
     #TODO
     context.spotlight_find_ax = plt.axes(spotlight_axes)
     butt = Button(context.spotlight_find_ax, "Find!")
-    butt.on_clicked(get_nearest_marker)
+    get_marker = nearest_marker_factory()
+    butt.on_clicked(get_marker)
     #end TODO
 
     plt.sca(context.ax)
@@ -327,84 +229,6 @@ def refresh(term):
     #TODO
     context.search_data.spotlight_search_scope =  context.search_data.chapters[3].render_deets.occ_pos_plot_loc
     #end TODO
-
-def get_nearest_marker(event):
-    global context
-
-    pos_list = context.search_data.spotlight_search_scope
-    if len(pos_list) == 0:
-        return
-
-    (x_bot, x_top) = context.ax.get_xlim()
-    (y_bot, y_top) = context.ax.get_ylim()
-
-    centre = coords((x_bot + x_top) / 2,
-              (y_bot + y_bot) / 2)
-
-    print("centre: " + str(centre.x))
-    min_dis = get_dis(centre, pos_list[0])
-    min_pos = pos_list[0]
-    context.spotlight_nav_idx = 0
-    i = 0
-    for i in range(len(pos_list)):
-        x = get_dis(centre, pos_list[i])
-        if x < min_dis:
-            min_dis = x
-            min_pos = pos_list[i]
-            context.spotlight_nav_idx = i
-    move_camera(min_pos)
-    create_nav_buttons()
-
-def create_nav_buttons():
-    global context
-
-    pos_list = context.search_data.spotlight_search_scope
-
-    context.spotlight_next_ax = plt.axes(nav_next_axes)
-    context.spotlight_prev_ax = plt.axes(nav_prev_axes)
-
-    butt_next = Button(context.spotlight_next_ax, ">")
-    butt_prev = Button(context.spotlight_prev_ax, "<")
-    plt.sca(context.ax)
-
-    def move_factory(direction: int):
-        def move_func(event):
-            context.spotlight_nav_idx = (context.spotlight_nav_idx + direction) % len(pos_list)
-            move_camera(pos_list[context.spotlight_nav_idx])
-        return move_func
-
-    butt_next.on_clicked(move_factory(1))
-    butt_prev.on_clicked(move_factory(-1))
-    context.spotlight_next_butt = butt_next
-    context.spotlight_prev_butt = butt_prev
-
-    return
-
-
-def move_camera(target_pos: coords):
-    global context
-    print("moving to " + str(target_pos.x) + " ," + str(target_pos.y))
-    (a, b) = context.ax.get_xlim()
-    curr_width = b - a
-    bot_x = target_pos.x - curr_width / 2
-    top_x = target_pos.x + curr_width / 2
-
-    context.spotlight_bounds = ((bot_x, top_x), context.ax.get_ylim())
-    context.ax.set_xlim(bot_x, top_x)
-
-    (a, b) = context.ax.get_ylim()
-    curr_height = b - a
-    bot_y = target_pos.y - curr_height / 2
-    top_y = target_pos.y + curr_height / 2
-
-    context.spotlight_bounds = ((bot_x, top_x), (bot_y, top_y))
-    context.ax.set_ylim(bot_y, top_y)
-
-def get_dis(coords_a, coords_b):
-    return sqrt(
-                abs(coords_a.x - coords_b.x) ** 2 +
-                abs(coords_a.y - coords_b.y) ** 2
-    )
 
 context = SingletonContext()
 create_and_populate_graph()
