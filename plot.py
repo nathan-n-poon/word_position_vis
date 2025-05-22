@@ -1,19 +1,10 @@
-from math import sqrt
 from typing import List
 
-import matplotlib
-import matplotlib.pyplot as plt
-from fontTools.unicodedata import block
 from matplotlib.collections import LineCollection
 from matplotlib.lines import Line2D
-from matplotlib.patches import Rectangle
 from matplotlib.text import Text
-from matplotlib.widgets import Button, TextBox
+from matplotlib.widgets import TextBox
 
-import gather_stats
-from consts import *
-from my_types import *
-from aggregate_keeper import *
 from spotlight import *
 
 class SingletonSearchData(object):
@@ -151,7 +142,7 @@ def cb_xy_moved_remove_nav(axes):
 
     current_bounds = (context.ax.get_xlim(), context.ax.get_ylim())
     if context.spotlight_manager.spotlight_bounds != nav_init_bounds:
-        if not context.spotlight_manager.compare_bounds_tolerance(0.9, current_bounds, context.spotlight_manager.spotlight_bounds):
+        if not compare_bounds_tolerance(0.9, current_bounds, context.spotlight_manager.spotlight_bounds):
             if hasattr(context.spotlight_manager, "spotlight_next_butt"):
                 context.spotlight_manager.del_buttons()
 

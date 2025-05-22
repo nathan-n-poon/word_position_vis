@@ -1,9 +1,6 @@
 from math import sqrt
 
-from matplotlib.text import Text
 from matplotlib.widgets import Button
-from consts import *
-import matplotlib.pyplot as plt
 from my_types import *
 from aggregate_keeper import *
 
@@ -13,6 +10,27 @@ def del_button(del_me: Button):
     del_me.label.set_visible(False)
     del_me.ax.axis("off")
     del del_me
+
+def compare_tolerance(tolerance: float, lhs: float, rhs: float):
+    if rhs == 0.:
+        rhs = 0.000001
+    ratio = lhs / rhs
+    if abs(ratio) > 1:
+        ratio = 1 / ratio
+    return tolerance < abs(ratio)
+
+def compare_bounds_tolerance(tolerance: float, lhbounds, rhbounds):
+    return (compare_tolerance(tolerance, lhbounds[0][0], rhbounds[0][0]) and
+            compare_tolerance(tolerance, lhbounds[0][1], rhbounds[0][1]) and
+            compare_tolerance(tolerance, lhbounds[1][0], rhbounds[1][0]) and
+            compare_tolerance(tolerance, lhbounds[1][1], rhbounds[1][1]))
+
+
+def get_dis(coords_a, coords_b):
+    return sqrt(
+        abs(coords_a.x - coords_b.x) ** 2 +
+        abs(coords_a.y - coords_b.y) ** 2
+    )
 
 
 class SpotlightWarden(object):
@@ -28,20 +46,6 @@ class SpotlightWarden(object):
     #int is index to specific instance in chapter
     spotlight_marker: (Chapter, int)
     spotlight_search_scope: list[coords]
-
-    def compare_tolerance(self, tolerance: float, lhs: float, rhs: float):
-        if rhs == 0.:
-            rhs = 0.000001
-        ratio = lhs / rhs
-        if abs(ratio) > 1:
-            ratio = 1 / ratio
-        return tolerance < abs(ratio)
-
-    def compare_bounds_tolerance(self, tolerance: float, lhbounds, rhbounds):
-        return (self.compare_tolerance(tolerance, lhbounds[0][0], rhbounds[0][0]) and
-                self.compare_tolerance(tolerance, lhbounds[0][1], rhbounds[0][1]) and
-                self.compare_tolerance(tolerance, lhbounds[1][0], rhbounds[1][0]) and
-                self.compare_tolerance(tolerance, lhbounds[1][1], rhbounds[1][1]))
 
     def del_buttons(self):
         del_button(self.spotlight_next_butt)
@@ -61,11 +65,11 @@ class SpotlightWarden(object):
                             (y_bot + y_bot) / 2)
 
             print("centre: " + str(centre.x))
-            min_dis = self.get_dis(centre, pos_list[0])
+            min_dis = get_dis(centre, pos_list[0])
             min_pos = pos_list[0]
             self.spotlight_nav_idx = 0
             for i in range(len(pos_list)):
-                x = self.get_dis(centre, pos_list[i])
+                x = get_dis(centre, pos_list[i])
                 if x < min_dis:
                     min_dis = x
                     min_pos = pos_list[i]
@@ -116,9 +120,3 @@ class SpotlightWarden(object):
 
         self.spotlight_bounds = ((bot_x, top_x), (bot_y, top_y))
         context.ax.set_ylim(bot_y, top_y)
-
-    def get_dis(self, coords_a, coords_b):
-        return sqrt(
-            abs(coords_a.x - coords_b.x) ** 2 +
-            abs(coords_a.y - coords_b.y) ** 2
-        )
