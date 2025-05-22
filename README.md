@@ -27,3 +27,13 @@ This is because having single functions deal with both generally is difficult :(
 for ex: gather_stats.py: get_stats_by_chapter(), get_stats_unified
         plot.py:         vis_by_chapter(), vis_unified(),   // maybe these can have a single general purpose func, or at most a modest wrapper
                          spotlight_by_chapter(), spotlight_unified() // maybe these can have a single general purpose func, or at most a modest wrapper
+
+
+internal deps:
+       _____ aggregate_keeper \
+      /                        \____
+consts                          ____ spotlight ----- plot
+                               /
+gather_stats ------- my_types /
+
+// my_types shouldn't depend on gather_stats... shouldn't depend on anything
