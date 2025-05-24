@@ -19,7 +19,7 @@ def add_aggregate_label(context, x, y, width, aggregate_size):
 
 def aggregate_chapter_pos(context, chapter_stats, y_offset, coalesce_width):
     # cute alias
-    locs = chapter_stats.occ_pos_plot_loc
+    locs = chapter_stats.chapter_pos_coords
     if len(locs) < 1:
         return
 

@@ -15,12 +15,21 @@ class coords(object):
         self.y = y
 
 class ChapterRenderDeets(object):
-    occ_pos_norm: list[float]
-    occ_pos_plot_loc: list[coords]
+    chapter_pos_norm: list[float]
+    chapter_pos_coords: list[coords]
 
     def __init__(self):
-        self.occ_pos_norm = []
-        self.occ_pos_plot_loc = []
+        self.chapter_pos_norm = []
+        self.chapter_pos_coords = []
+
+
+class SingleRenderDeets(object):
+    single_pos_norm: list[float]
+    single_pos_coords: list[coords]
+
+    def __init__(self):
+        self.single_pos_norm = []
+        self.single_pos_coords = []
 
 class Chapter(object):
     render_deets: ChapterRenderDeets

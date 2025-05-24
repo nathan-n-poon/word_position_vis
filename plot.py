@@ -72,12 +72,14 @@ class SingletonContext(object):
     init_y_bounds: float
     search_term_input: TextBox
 
+    single_render: SingleRenderDeets
+
     def __new__(self):
         if not hasattr(self, 'instance'):
-          self.instance = super(SingletonContext, self).__new__(self)
-          self.search_data = SingletonSearchData()
-          self.spotlight_manager = SpotlightWarden()
-
+            self.instance = super(SingletonContext, self).__new__(self)
+            self.search_data = SingletonSearchData()
+            self.spotlight_manager = SpotlightWarden()
+            self.single_render = SingleRenderDeets()
         return self.instance
 
 def vis_chapter(chapter, y_offset):
@@ -94,14 +96,33 @@ def vis_chapter(chapter, y_offset):
     t3 = plt.vlines(line_x_start + line_len, y - bounds_height, y + bounds_height)
     context.search_data.chapter_lines.extend([t1,t2,t3])
 
-    for pos in chapter.render_deets.occ_pos_norm:
+    for pos in chapter.render_deets.chapter_pos_norm:
         plot_loc = line_len * pos + line_x_start
-        chapter.render_deets.occ_pos_plot_loc.append(coords(plot_loc, y))
+        chapter.render_deets.chapter_pos_coords.append(coords(plot_loc, y))
 
         temp = plt.plot(plot_loc, y,
                  marker='|', markersize=marker_size,
                  markeredgecolor=marker_default_colour)
         context.search_data.markers.extend(temp)
+
+def vis_single():
+    global context
+
+    line_len = (line_x_end - line_x_start)
+    t1 = plt.hlines(0, line_x_start, line_x_start + line_len)
+    t2 = plt.vlines(line_x_start, 0 - bounds_height, 0 + bounds_height)
+    t3 = plt.vlines(line_x_start + line_len, 0 - bounds_height, 0 + bounds_height)
+
+    for occurence in monolith_stats.occurrence_pos:
+        context.single_render.single_pos_norm.append(occurence / monolith_stats.char_length)
+
+    for pos in context.single_render.single_pos_norm:
+        plot_loc = line_len * pos + line_x_start
+
+        temp = plt.plot(plot_loc, 0,
+                 marker='|', markersize=marker_size,
+                 markeredgecolor=marker_default_colour)
+
 
 def add_chapter_label(y, chapter_num):
     x = line_x_start - chapter_label_x_pad * context.x_zoom_ratio
@@ -145,7 +166,7 @@ def cb_xy_moved_remove_nav(axes):
 
     current_bounds = (context.ax.get_xlim(), context.ax.get_ylim())
     if context.spotlight_manager.spotlight_bounds != nav_init_bounds:
-        if not compare_bounds_tolerance(0.9, current_bounds, context.spotlight_manager.spotlight_bounds):
+        if not compare_bounds_tolerance(nav_pan_cancel_sens, current_bounds, context.spotlight_manager.spotlight_bounds):
             print("oof", count)
             count += 1
             context.spotlight_manager.del_buttons()
@@ -178,12 +199,10 @@ def create_and_populate_graph():
     context.search_term_input = TextBox(plt.axes(search_axes), "Search term")
     context.search_term_input.on_submit(refresh)
 
-    #TODO
     context.spotlight_find_ax = plt.axes(spotlight_axes)
     butt = Button(context.spotlight_find_ax, "Find!")
     get_marker = context.spotlight_manager.nearest_marker_factory(context)
     butt.on_clicked(get_marker)
-    #end TODO
 
     plt.sca(context.ax)
     plt.show()
@@ -194,23 +213,25 @@ def driver(search_term):
         driver(default_search_text)
         return
     chapter_stats = get_stats(search_term)
-    for chapter_stat in chapter_stats:
-        context.search_data.chapters.append(Chapter(chapter_stat))
-    context.search_data.max_len = -1
+    # for chapter_stat in chapter_stats:
+    #     context.search_data.chapters.append(Chapter(chapter_stat))
+    # context.search_data.max_len = -1
+    #
+    # for chapter in context.search_data.chapters:
+    #     if chapter.chapter_stat.char_length > context.search_data.max_len:
+    #         context.search_data.max_len = chapter.chapter_stat.char_length
+    #
+    # # separate for loop, maybe less cache hit but idgad
+    # for chapter in context.search_data.chapters:
+    #     for i in range(len(chapter.chapter_stat.occurrence_pos)):
+    #         chapter.render_deets.chapter_pos_norm.append(chapter.chapter_stat.occurrence_pos[i] / chapter.chapter_stat.char_length)
+    #
+    # count = 0
+    # for chapter in context.search_data.chapters:
+    #     vis_chapter(chapter, top_margin * count)
+    #     count -= 1
 
-    for chapter in context.search_data.chapters:
-        if chapter.chapter_stat.char_length > context.search_data.max_len:
-            context.search_data.max_len = chapter.chapter_stat.char_length
-
-    # separate for loop, maybe less cache hit but idgad
-    for chapter in context.search_data.chapters:
-        for i in range(len(chapter.chapter_stat.occurrence_pos)):
-            chapter.render_deets.occ_pos_norm.append(chapter.chapter_stat.occurrence_pos[i] / chapter.chapter_stat.char_length)
-
-    count = 0
-    for chapter in context.search_data.chapters:
-        vis_chapter(chapter, top_margin * count)
-        count -= 1
+    vis_single()
 
     aggregate_all(context, aggregate_base_distance_thresh)
 
@@ -222,7 +243,7 @@ def refresh(term):
     driver(term)
 
     #TODO
-    context.spotlight_manager.spotlight_search_scope =  context.search_data.chapters[3].render_deets.occ_pos_plot_loc
+    # context.spotlight_manager.spotlight_search_scope =  context.search_data.chapters[3].render_deets.chapter_pos_coords
     #end TODO
 
 context = SingletonContext()

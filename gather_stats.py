@@ -11,7 +11,7 @@ monolith_stats = MonolithStats()
 
 # search_token = "and"
 
-def search_line(needle, line, base_offset):
+def search_line(needle, line, base_offset, text):
     positions = []
     pos = find_sub(needle, line)
     curr_offset = 0
@@ -19,6 +19,7 @@ def search_line(needle, line, base_offset):
         positions.append(base_offset + curr_offset + pos)
         curr_offset = curr_offset + pos  + len(needle)
         pos = find_sub(needle, line[curr_offset:])
+        monolith_stats.occurrence_pos.extend([text.tell()])
     return positions
 
 def find_sub(needle, haystack):
@@ -42,7 +43,7 @@ def get_stats(search_token):
         curr_chapter_offset = 0
         chapter_occurrence_pos = []
 
-        for line in text:
+        while line := text.readline():
             if line.find(bottom_bound) >= 0:
                 found_start = True
             if found_start:
@@ -61,10 +62,12 @@ def get_stats(search_token):
                 chapter_len += len(line)
                 chapter_occurrence_pos.extend(search_line(search_token,
                                                           line,
-                                                          curr_chapter_offset))
+                                                          curr_chapter_offset, text))
                 curr_chapter_offset += len(line)
         chapter_stats.append(ChapterStat(chapter_number=chapter_count,
                                          char_length=chapter_len,
                                          occurrence_pos=chapter_occurrence_pos))
+
+        monolith_stats.char_length = text.tell()
         return chapter_stats
 
