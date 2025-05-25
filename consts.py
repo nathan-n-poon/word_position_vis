@@ -42,3 +42,4 @@ nav_init_bounds = ((0., 0.), (0., 0.))
 nav_pan_cancel_sens = 0.9
 
 default_search_text = "an improbable text a̶n̶d̴ ̶s̶o̷m̶e̵ ̵u̸n̶i̵c̶o̶d̵e̸ ̶m̸a̶d̸n̸e̵s̵s̶!̴"
+chapter_delim = "Chapter "

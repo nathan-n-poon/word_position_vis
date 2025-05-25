@@ -1,25 +1,15 @@
-from dataclasses import dataclass
 from re import search, escape
 from my_types import *
+from consts import *
 
-class MonolithStats:
-    char_length: int=0
-    occurrence_pos: list[int]=[]
-
-chapter_stats = []
-monolith_stats = MonolithStats()
-
-# search_token = "and"
-
-def search_line(needle, line, base_offset, text):
+def search_line(needle, line):
     positions = []
     pos = find_sub(needle, line)
     curr_offset = 0
     while pos >= 0:
-        positions.append(base_offset + curr_offset + pos)
+        positions.append(curr_offset + pos)
         curr_offset = curr_offset + pos  + len(needle)
         pos = find_sub(needle, line[curr_offset:])
-        monolith_stats.occurrence_pos.extend([text.tell()])
     return positions
 
 def find_sub(needle, haystack):
@@ -28,46 +18,73 @@ def find_sub(needle, haystack):
         return -1
     return x.start()
 
-#TODO: create variant for just monolith_stats
-#should be separate variant?  I think so....
-def get_stats(search_token):
-    global chapter_stats
+class MonolithStats(GatherStatInterface):
+    valid = True
+    curr_offset = 0
+    monolith_stats = MonolithStats()
+
+    def ingest_line(self, line: str, pos_list: list[int]):
+        for pos in pos_list:
+            self.monolith_stats.occurrence_pos.append(pos + self.curr_offset)
+        self.curr_offset += len(line)
+        
+    def finish(self):
+        self.monolith_stats.char_length = self.curr_offset
+
+class ChaptersStats(GatherStatInterface):
     chapter_stats = []
+    chapter_count = 1
+    found_start = False
+    chapter_len = 0
+    curr_chapter_offset = 0
+    chapter_occurrence_pos = []
+
+    def get_chapter_names(self, bottom_bound: int):
+        return chapter_delim + str(bottom_bound), chapter_delim + str(bottom_bound + 1)
+    bottom_bound, upper_bound = get_chapter_names(chapter_count)
+
+    def ingest_line(self, line: str, pos_list: list[int]):
+        if line.find(self.bottom_bound) >= 0:
+            self.found_start = True
+        if self.found_start:
+            if line.find(self.upper_bound) >= 0:
+                self.chapter_stats.append(ChapterStat(chapter_number=self.chapter_count,
+                                                 char_length=self.chapter_len,
+                                                 occurrence_pos=self.chapter_occurrence_pos))
+
+                self.chapter_count += 1
+                self.bottom_bound, self.upper_bound = self.get_chapter_names(self.chapter_count)
+
+                self.chapter_len = 0
+                self.curr_chapter_offset = 0
+                self.chapter_occurrence_pos = []
+
+            self.chapter_len += len(line)
+            self.curr_chapter_offset += len(line)
+
+            chapter_pos_list = []
+            for pos in pos_list:
+                chapter_pos_list.append(pos + self.curr_chapter_offset)
+            self.chapter_occurrence_pos.extend(chapter_pos_list)
+            
+    def finish(self):
+        if self.found_start:
+            self.chapter_stats.append(ChapterStat(chapter_number=self.chapter_count,
+                                             char_length=self.chapter_len,
+                                             occurrence_pos=self.chapter_occurrence_pos))
+            self.valid = True
+
+def get_stats(search_token):
+    chapter_stats = ChaptersStats()
+    monolith_stats = MonolithStats()
+    
     with open("input.txt") as text:
-        chapter_count = 1
-        bottom_bound = "Chapter " + str(chapter_count)
-        upper_bound = "Chapter " + str(chapter_count + 1)
-
-        found_start = False
-        chapter_len = 0
-        curr_chapter_offset = 0
-        chapter_occurrence_pos = []
-
         while line := text.readline():
-            if line.find(bottom_bound) >= 0:
-                found_start = True
-            if found_start:
-                if line.find(upper_bound) >= 0:
-                    chapter_stats.append(ChapterStat(chapter_number=chapter_count,
-                                                     char_length=chapter_len,
-                                                     occurrence_pos=chapter_occurrence_pos))
+            pos_list = search_line(search_token, line)
+            
+            chapter_stats.ingest_line(line, pos_list)
+            monolith_stats.ingest_line(line, pos_list)
 
-                    chapter_count += 1
-                    bottom_bound = "Chapter " + str(chapter_count)
-                    upper_bound = "Chapter " + str(chapter_count + 1)
-                    chapter_len = 0
-                    curr_chapter_offset = 0
-                    chapter_occurrence_pos = []
-
-                chapter_len += len(line)
-                chapter_occurrence_pos.extend(search_line(search_token,
-                                                          line,
-                                                          curr_chapter_offset, text))
-                curr_chapter_offset += len(line)
-        chapter_stats.append(ChapterStat(chapter_number=chapter_count,
-                                         char_length=chapter_len,
-                                         occurrence_pos=chapter_occurrence_pos))
-
-        monolith_stats.char_length = text.tell()
-        return chapter_stats
-
+        chapter_stats.finish()
+        monolith_stats.finish()
+    return chapter_stats
