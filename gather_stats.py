@@ -39,9 +39,11 @@ class ChaptersStats(GatherStatInterface):
     curr_chapter_offset = 0
     chapter_occurrence_pos = []
 
+    def __init__(self):
+        self.bottom_bound, self.upper_bound = self.get_chapter_names(self.chapter_count)
+
     def get_chapter_names(self, bottom_bound: int):
         return chapter_delim + str(bottom_bound), chapter_delim + str(bottom_bound + 1)
-    bottom_bound, upper_bound = get_chapter_names(chapter_count)
 
     def ingest_line(self, line: str, pos_list: list[int]):
         if line.find(self.bottom_bound) >= 0:
@@ -74,17 +76,24 @@ class ChaptersStats(GatherStatInterface):
                                              occurrence_pos=self.chapter_occurrence_pos))
             self.valid = True
 
-def get_stats(search_token):
-    chapter_stats = ChaptersStats()
-    monolith_stats = MonolithStats()
+def get_stats(search_token, mode: ViewMode):
+    ops: list[GatherStatInterface] = []
+
+    if mode == ViewMode.All:
+        ops.extend([ChaptersStats(), MonolithStats()])
+    elif mode == ViewMode.Chapters:
+        ops.append(ChaptersStats())
+    elif mode == ViewMode.Monolithic:
+        ops.append(MonolithStats())
     
     with open("input.txt") as text:
         while line := text.readline():
             pos_list = search_line(search_token, line)
             
-            chapter_stats.ingest_line(line, pos_list)
-            monolith_stats.ingest_line(line, pos_list)
+            for op in ops:
+                op.ingest_line(line, pos_list)
 
-        chapter_stats.finish()
-        monolith_stats.finish()
-    return chapter_stats
+        for op in ops:
+            op.finish()
+
+    return ops

@@ -1,3 +1,5 @@
+from enum import Enum
+
 top_margin = 1
 chapter_disp_height = 1
 bounds_height = chapter_disp_height / 3.
@@ -29,17 +31,34 @@ label_centre_shift = 0.125
 
 zoom_sens = 0.01
 
-search_axes = [0.2, 0.85, 0.1, 0.05]
+top_y = 0.85
+butt_height = 0.05
+
+search_x = 0.2
+search_axes = [search_x, top_y, 0.1, butt_height]
 
 spotlight_butt_width = 0.1
-spotlight_butt_height = 0.05
 spotlight_x = 0.8
-spotlight_y = 0.85
-spotlight_axes = [spotlight_x, spotlight_y, spotlight_butt_width, spotlight_butt_height]
-nav_prev_axes = [spotlight_x, spotlight_y - spotlight_butt_height, spotlight_butt_width/2, spotlight_butt_height]
-nav_next_axes = [spotlight_x + spotlight_butt_width/2, spotlight_y - spotlight_butt_height, spotlight_butt_width/2, spotlight_butt_height]
+spotlight_y = top_y
+spotlight_axes = [spotlight_x,                          spotlight_y,               spotlight_butt_width,   butt_height]
+nav_prev_axes =  [spotlight_x,                          spotlight_y - butt_height, spotlight_butt_width/2, butt_height]
+nav_next_axes = [ spotlight_x + spotlight_butt_width/2, spotlight_y - butt_height, spotlight_butt_width/2, butt_height]
 nav_init_bounds = ((0., 0.), (0., 0.))
 nav_pan_cancel_sens = 0.9
 
+view_toggle_x = (search_x + spotlight_x) / 2
+view_toggle_y = top_y
+view_toggle_width = 0.15
+view_toggle_axes = [ view_toggle_x, view_toggle_y,               view_toggle_width, butt_height]
+view_toggle_left = [ view_toggle_x, view_toggle_y - butt_height, view_toggle_width, butt_height]
+view_toggle_right = [view_toggle_x, view_toggle_y - butt_height, view_toggle_width, butt_height]
+
+
+
 default_search_text = "an improbable text a̶n̶d̴ ̶s̶o̷m̶e̵ ̵u̸n̶i̵c̶o̶d̵e̸ ̶m̸a̶d̸n̸e̵s̵s̶!̴"
 chapter_delim = "Chapter "
+
+class ViewMode(Enum):
+    All = 1
+    Chapters = 2
+    Monolithic = 3

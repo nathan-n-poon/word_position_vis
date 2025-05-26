@@ -1,13 +1,17 @@
 from typing import List
 
+import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.lines import Line2D
 from matplotlib.text import Text
 from matplotlib.widgets import TextBox
 
+import gather_stats
 from spotlight import *
 from gather_stats import *
 
+#TODO: maybe split into monolith and chapters
+# inheritance?
 class SingletonSearchData(object):
     max_len: int
     chapters: List[Chapter]
@@ -16,6 +20,9 @@ class SingletonSearchData(object):
     chapter_lines: List[LineCollection]
 
     chapter_labels: List[Text]
+
+    monolith_markers: List[Line2D]
+    monolith_lines: List[LineCollection]
 
     def __new__(self):
         if not hasattr(self, 'instance'):
@@ -27,6 +34,8 @@ class SingletonSearchData(object):
         self.chapter_lines = []
         self.chapter_labels = []
         self.spotlight_search_scope = []
+        self.monolith_markers = []
+        self.monolith_lines = []
         return self.instance
 
     def clear_aggregates(self):
@@ -49,12 +58,24 @@ class SingletonSearchData(object):
             label.remove()
         self.chapter_labels = []
 
+    def clear_monolith_markers(self):
+        for marker in self.monolith_markers:
+            marker.remove()
+        self.monolith_markers = []
+
+    def clear_monolith_lines(self):
+        for line in self.monolith_lines:
+            line.remove()
+        self.monolith_lines = []
+
     def clear_slate(self):
         self.chapters = []
         self.clear_aggregates()
         self.clear_search_results()
         self.clear_chapter_lines()
         self.clear_chapter_labels()
+        self.clear_monolith_markers()
+        self.clear_monolith_lines()
 
 # global context
 class SingletonContext(object):
@@ -74,12 +95,15 @@ class SingletonContext(object):
 
     single_render: SingleRenderDeets
 
+    view_mode: ViewMode
+
     def __new__(self):
         if not hasattr(self, 'instance'):
             self.instance = super(SingletonContext, self).__new__(self)
             self.search_data = SingletonSearchData()
             self.spotlight_manager = SpotlightWarden()
             self.single_render = SingleRenderDeets()
+            self.view_mode = ViewMode.Monolithic
         return self.instance
 
 def vis_chapter(chapter, y_offset):
@@ -105,7 +129,7 @@ def vis_chapter(chapter, y_offset):
                  markeredgecolor=marker_default_colour)
         context.search_data.markers.extend(temp)
 
-def vis_single():
+def vis_single(occurrence_pos, char_length):
     global context
 
     line_len = (line_x_end - line_x_start)
@@ -113,8 +137,10 @@ def vis_single():
     t2 = plt.vlines(line_x_start, 0 - bounds_height, 0 + bounds_height)
     t3 = plt.vlines(line_x_start + line_len, 0 - bounds_height, 0 + bounds_height)
 
-    for occurence in monolith_stats.occurrence_pos:
-        context.single_render.single_pos_norm.append(occurence / monolith_stats.char_length)
+    context.search_data.monolith_lines.extend([t1,t2,t3])
+
+    for occurrence in occurrence_pos:
+        context.single_render.single_pos_norm.append(occurrence / char_length)
 
     for pos in context.single_render.single_pos_norm:
         plot_loc = line_len * pos + line_x_start
@@ -122,6 +148,7 @@ def vis_single():
         temp = plt.plot(plot_loc, 0,
                  marker='|', markersize=marker_size,
                  markeredgecolor=marker_default_colour)
+        context.search_data.monolith_markers.extend(temp)
 
 
 def add_chapter_label(y, chapter_num):
@@ -204,6 +231,8 @@ def create_and_populate_graph():
     get_marker = context.spotlight_manager.nearest_marker_factory(context)
     butt.on_clicked(get_marker)
 
+    view_mode_toggle_butt = ToggleButton()
+
     plt.sca(context.ax)
     plt.show()
 
@@ -212,28 +241,68 @@ def driver(search_term):
     if search_term == "":
         driver(default_search_text)
         return
-    chapter_stats = get_stats(search_term)
-    # for chapter_stat in chapter_stats:
-    #     context.search_data.chapters.append(Chapter(chapter_stat))
-    # context.search_data.max_len = -1
-    #
-    # for chapter in context.search_data.chapters:
-    #     if chapter.chapter_stat.char_length > context.search_data.max_len:
-    #         context.search_data.max_len = chapter.chapter_stat.char_length
-    #
-    # # separate for loop, maybe less cache hit but idgad
-    # for chapter in context.search_data.chapters:
-    #     for i in range(len(chapter.chapter_stat.occurrence_pos)):
-    #         chapter.render_deets.chapter_pos_norm.append(chapter.chapter_stat.occurrence_pos[i] / chapter.chapter_stat.char_length)
-    #
-    # count = 0
-    # for chapter in context.search_data.chapters:
-    #     vis_chapter(chapter, top_margin * count)
-    #     count -= 1
 
-    vis_single()
+    if context.view_mode == ViewMode.Monolithic:
+        data = gather_stats.get_stats(search_term, ViewMode.Monolithic)[0]
+        vis_single(data.monolith_stats.occurrence_pos, data.monolith_stats.char_length)
+
+    elif context.view_mode == ViewMode.Chapters:
+        data = get_stats(search_term, ViewMode.Chapters)[0]
+        chapter_stats = data.chapter_stats
+
+        for chapter_stat in chapter_stats:
+            context.search_data.chapters.append(Chapter(chapter_stat))
+        context.search_data.max_len = -1
+
+        for chapter in context.search_data.chapters:
+            if chapter.chapter_stat.char_length > context.search_data.max_len:
+                context.search_data.max_len = chapter.chapter_stat.char_length
+
+        for chapter in context.search_data.chapters:
+            for i in range(len(chapter.chapter_stat.occurrence_pos)):
+                chapter.render_deets.chapter_pos_norm.append(chapter.chapter_stat.occurrence_pos[i] / chapter.chapter_stat.char_length)
+
+        count = 0
+        for chapter in context.search_data.chapters:
+            vis_chapter(chapter, top_margin * count)
+            count -= 1
 
     aggregate_all(context, aggregate_base_distance_thresh)
+
+class ToggleButton(object):
+    global context
+    label = "Toggle View"
+    butt: Button
+    desc: Text
+    ax: plt.Axes
+
+    def __init__(self):
+        self.ax = plt.axes(view_toggle_axes)
+        self.butt = Button(self.ax, self.label)
+        self.butt.on_clicked(self.toggle_view_factory())
+        plt.sca(context.ax)
+
+    def toggle_view_factory(self):
+        def toggle_view(event):
+            if context.view_mode == ViewMode.Monolithic:
+                context.view_mode = ViewMode.Chapters
+            else:
+                context.view_mode = ViewMode.Monolithic
+
+            plt.sca(self.ax)
+            if hasattr(self, "desc"):
+                self.desc.set_visible(False)
+                self.desc.remove()
+                del self.desc
+            if context.view_mode == ViewMode.Monolithic:
+                self.desc = plt.text(view_toggle_left[0], view_toggle_left[1], "Single View")
+            else:
+                self.desc = plt.text(view_toggle_right[0], view_toggle_right[1], "Chapters View")
+            plt.sca(context.ax)
+            refresh(context.search_term_input.text)
+        return toggle_view
+
+
 
 def refresh(term):
     global context
