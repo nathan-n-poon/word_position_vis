@@ -18,10 +18,15 @@ def find_sub(needle, haystack):
         return -1
     return x.start()
 
-class MonolithStats(GatherStatInterface):
-    valid = True
-    curr_offset = 0
-    monolith_stats = MonolithStats()
+class GatherMonolithStats(GatherStatInterface):
+    valid: bool
+    curr_offset: int
+    monolith_stats: MonolithStats
+
+    def __init__(self):
+        self.valid = True
+        self.curr_offset = 0
+        self.monolith_stats = MonolithStats()
 
     def ingest_line(self, line: str, pos_list: list[int]):
         for pos in pos_list:
@@ -31,15 +36,21 @@ class MonolithStats(GatherStatInterface):
     def finish(self):
         self.monolith_stats.char_length = self.curr_offset
 
-class ChaptersStats(GatherStatInterface):
-    chapter_stats = []
-    chapter_count = 1
-    found_start = False
-    chapter_len = 0
-    curr_chapter_offset = 0
-    chapter_occurrence_pos = []
+class GatherChaptersStats(GatherStatInterface):
+    chapter_stats: [ChapterStat]
+    chapter_count: int
+    found_start: False
+    chapter_len: int
+    curr_chapter_offset: int
+    chapter_occurrence_pos: [int]
 
     def __init__(self):
+        self.chapter_stats = []
+        self.chapter_count = 1
+        self.found_start = False
+        self.chapter_len = 0
+        self.curr_chapter_offset = 0
+        self.chapter_occurrence_pos = []
         self.bottom_bound, self.upper_bound = self.get_chapter_names(self.chapter_count)
 
     def get_chapter_names(self, bottom_bound: int):
@@ -80,11 +91,11 @@ def get_stats(search_token, mode: ViewMode):
     ops: list[GatherStatInterface] = []
 
     if mode == ViewMode.All:
-        ops.extend([ChaptersStats(), MonolithStats()])
+        ops.extend([GatherChaptersStats(), MonolithStats()])
     elif mode == ViewMode.Chapters:
-        ops.append(ChaptersStats())
+        ops.append(GatherChaptersStats())
     elif mode == ViewMode.Monolithic:
-        ops.append(MonolithStats())
+        ops.append(GatherMonolithStats())
     
     with open("input.txt") as text:
         while line := text.readline():

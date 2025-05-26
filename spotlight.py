@@ -34,7 +34,7 @@ def get_dis(coords_a, coords_b):
 
 
 class SpotlightWarden(object):
-    spotlight_nav_idx = 0
+    spotlight_nav_idx: int
     spotlight_next_butt: Button
     spotlight_prev_butt: Button
     spotlight_bounds = nav_init_bounds
@@ -46,6 +46,9 @@ class SpotlightWarden(object):
     #int is index to specific instance in chapter
     spotlight_marker: (Chapter, int)
     spotlight_search_scope: list[coords]
+
+    def __init__(self):
+        self.spotlight_nav_idx = 0
 
     def del_buttons(self):
         if hasattr(self, "spotlight_next_butt") and hasattr(self, "spotlight_prev_butt"):

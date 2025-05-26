@@ -8,8 +8,12 @@ class ChapterStat:
     occurrence_pos: list[int]
 
 class MonolithStats:
-    char_length: int=0
-    occurrence_pos: list[int]=[]
+    char_length: int
+    occurrence_pos: list[int]
+
+    def __init__(self):
+        self.char_length = 0
+        self.occurrence_pos = []
 
 class coords(object):
     x: float

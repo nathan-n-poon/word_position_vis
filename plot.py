@@ -83,7 +83,7 @@ class SingletonContext(object):
     search_data: SingletonSearchData
     spotlight_manager: SpotlightWarden
 
-    x_zoom_ratio = 1.
+    x_zoom_ratio: float
 
     # all else is plot stuff -- not ephemeral
     ax: plt.Axes
@@ -99,6 +99,7 @@ class SingletonContext(object):
 
     def __new__(self):
         if not hasattr(self, 'instance'):
+            self.x_zoom_ratio = 1.
             self.instance = super(SingletonContext, self).__new__(self)
             self.search_data = SingletonSearchData()
             self.spotlight_manager = SpotlightWarden()
@@ -271,15 +272,17 @@ def driver(search_term):
 
 class ToggleButton(object):
     global context
-    label = "Toggle View"
+    label: str
     butt: Button
     desc: Text
     ax: plt.Axes
 
     def __init__(self):
+        self.label = "Toggle View"
         self.ax = plt.axes(view_toggle_axes)
         self.butt = Button(self.ax, self.label)
         self.butt.on_clicked(self.toggle_view_factory())
+        self.desc = plt.text(view_toggle_left[0], view_toggle_left[1], "Single View")
         plt.sca(context.ax)
 
     def toggle_view_factory(self):
