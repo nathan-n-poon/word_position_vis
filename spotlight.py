@@ -44,7 +44,7 @@ class SpotlightWarden(object):
     spotlight_next_ax: plt.Axes
 
     #int is index to specific instance in chapter
-    spotlight_marker: (Chapter, int)
+    spotlight_marker: (Segment, int)
     spotlight_search_scope: list[coords]
 
     def __init__(self):

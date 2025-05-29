@@ -37,7 +37,7 @@ class GatherMonolithStats(GatherStatInterface):
         self.monolith_stats.char_length = self.curr_offset
 
 class GatherChaptersStats(GatherStatInterface):
-    chapter_stats: [ChapterStat]
+    chapter_stats: [SegmentStat]
     chapter_count: int
     found_start: False
     chapter_len: int
@@ -61,9 +61,9 @@ class GatherChaptersStats(GatherStatInterface):
             self.found_start = True
         if self.found_start:
             if line.find(self.upper_bound) >= 0:
-                self.chapter_stats.append(ChapterStat(chapter_number=self.chapter_count,
-                                                 char_length=self.chapter_len,
-                                                 occurrence_pos=self.chapter_occurrence_pos))
+                self.chapter_stats.append(SegmentStat(chapter_number=self.chapter_count,
+                                                      char_length=self.chapter_len,
+                                                      occurrence_pos=self.chapter_occurrence_pos))
 
                 self.chapter_count += 1
                 self.bottom_bound, self.upper_bound = self.get_chapter_names(self.chapter_count)
@@ -82,9 +82,9 @@ class GatherChaptersStats(GatherStatInterface):
             
     def finish(self):
         if self.found_start:
-            self.chapter_stats.append(ChapterStat(chapter_number=self.chapter_count,
-                                             char_length=self.chapter_len,
-                                             occurrence_pos=self.chapter_occurrence_pos))
+            self.chapter_stats.append(SegmentStat(chapter_number=self.chapter_count,
+                                                  char_length=self.chapter_len,
+                                                  occurrence_pos=self.chapter_occurrence_pos))
             self.valid = True
 
 def get_stats(search_token, mode: ViewMode):

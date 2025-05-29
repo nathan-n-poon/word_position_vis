@@ -2,7 +2,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 
 @dataclass
-class ChapterStat:
+class SegmentStat:
     chapter_number: int
     char_length: int
     occurrence_pos: list[int]
@@ -23,34 +23,32 @@ class coords(object):
         self.x = x
         self.y = y
 
-class ChapterRenderDeets(object):
-    chapter_pos_norm: list[float]
-    chapter_pos_coords: list[coords]
+class SegmentRenderDeets(object):
+    segment_pos_norm: list[float]
+    segment_pos_coords: list[coords]
 
     def __init__(self):
-        self.chapter_pos_norm = []
-        self.chapter_pos_coords = []
+        self.segment_pos_norm = []
+        self.segment_pos_coords = []
 
+class SingleViewRenderDeets(object):
+    single_view_pos_norm: list[float]
+    single_view_pos_coords: list[coords]
 
-class SingleRenderDeets(object):
-    single_pos_norm: list[float]
-    single_pos_coords: list[coords]
-
-    single_pos_segments: list[list[float]]
+    single_view_pos_segments: list[list[float]]
 
     def __init__(self):
-        self.single_pos_norm = []
-        self.single_pos_coords = []
-        self.single_pos_segments = [[]]
+        self.single_view_pos_norm = []
+        self.single_view_pos_coords = []
+        self.single_view_pos_segments = [[]]
 
-class Chapter(object):
-    render_deets: ChapterRenderDeets
-    chapter_stat: ChapterStat
+class Segment(object):
+    render_deets: SegmentRenderDeets
+    segment_stat: SegmentStat
 
     def __init__(self, chapter_stat):
-        self.render_deets = ChapterRenderDeets()
-        self.chapter_stat = chapter_stat
-
+        self.render_deets = SegmentRenderDeets()
+        self.segment_stat = chapter_stat
 
 class GatherStatInterface(object):
     valid: bool=False

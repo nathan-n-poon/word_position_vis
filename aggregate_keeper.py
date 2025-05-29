@@ -18,7 +18,7 @@ def add_aggregate_label(context, x, y, width, aggregate_size):
                                            str(aggregate_size), zorder=z_order_aggregate_label))
 
 def aggregate_chapter_pos(context, chapter_stats, y_offset, coalesce_width):
-    aggregate(context, chapter_stats.chapter_pos_coords, y_offset, coalesce_width)
+    aggregate(context, chapter_stats.segment_pos_coords, y_offset, coalesce_width)
 
 def aggregate_single_segment(context, locs_segment, y_offset, coalesce_width):
     aggregate(context, locs_segment, y_offset, coalesce_width)
@@ -47,12 +47,12 @@ def aggregate(context, locs, y_offset, coalesce_width):
 
 def aggregate_all(context, coalesce_width):
     count = 0
-    for chapter in context.search_data.chapters:
+    for chapter in context.search_data.segments:
         aggregate_chapter_pos(context, chapter.render_deets, top_margin * count, coalesce_width)
         count -= 1
 
 def aggregate_single_segments(context, coalesce_width):
     count = 0
-    for segment in context.single_render.single_pos_segments:
+    for segment in context.single_view_render.single_view_pos_segments:
         aggregate_single_segment(context, segment, top_margin * count, coalesce_width)
         count -= 1
